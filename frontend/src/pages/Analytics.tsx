@@ -79,7 +79,7 @@ export const Analytics: React.FC = () => {
         </div>
 
         <button
-          onClick={() => alert('AI Optimization PDF report generated!')}
+          onClick={() => console.log('AI Optimization report requested')}
           className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-2 transition-all"
         >
           <Download className="h-4 w-4 text-indigo-400" /> Export AI Executive Report

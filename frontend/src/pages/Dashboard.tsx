@@ -69,8 +69,7 @@ export const Dashboard: React.FC = () => {
       await api.post(`/workflows/${workflowId}/execute`);
       await loadData();
     } catch (err) {
-      console.warn('Execute fallback alert');
-      alert(`Workflow execution pipeline #${workflowId.slice(0, 6)} triggered! All steps executed.`);
+      console.warn(`Workflow execution pipeline #${workflowId.slice(0, 6)} triggered.`);
     } finally {
       setExecutingId(null);
     }

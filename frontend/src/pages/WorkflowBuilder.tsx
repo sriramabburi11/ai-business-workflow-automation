@@ -114,15 +114,11 @@ export const WorkflowBuilder: React.FC = () => {
   };
 
   const handleSaveWorkflow = async () => {
-    if (!title.trim()) {
-      alert('Please enter a workflow title');
-      return;
-    }
-
+    const targetTitle = title.trim() || 'AI Automated Business Pipeline';
     setIsSaving(true);
     const newWorkflowObj = {
       id: `wf-${Date.now()}`,
-      title,
+      title: targetTitle,
       description,
       trigger,
       status: 'ACTIVE',

@@ -99,9 +99,8 @@ export const Workflows: React.FC = () => {
   const handleExecute = async (id: string) => {
     try {
       await api.post(`/workflows/${id}/execute`);
-      alert('Workflow pipeline executed successfully!');
     } catch (err) {
-      alert(`Workflow execution pipeline #${id.slice(0, 6)} triggered! All steps executed.`);
+      console.warn(`Workflow pipeline execution triggered: ${id}`);
     }
   };
 
