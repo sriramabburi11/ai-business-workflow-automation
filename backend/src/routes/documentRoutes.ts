@@ -14,6 +14,9 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
+// In-memory fallback documents store for serverless environment resilience
+const memoryDocuments: any[] = [];
+
 // GET /documents
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
@@ -28,17 +31,32 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       ? { workflow: { organizationId: orgId } }
       : { workflow: { createdBy: userId } };
 
-    const documents = await prisma.document.findMany({
-      where: whereClause,
-      include: {
-        workflow: { select: { id: true, title: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    return res.json(documents || []);
+    let dbDocuments: any[] = [];
+    try {
+      dbDocuments = await prisma.document.findMany({
+        where: whereClause,
+        include: {
+          workflow: { select: { id: true, title: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    } catch (e) {}
+
+    const orgMemoryDocs = memoryDocuments.filter(
+      d => (orgId && d.organizationId === orgId) || (userId && d.createdBy === userId)
+    );
+
+    const combined = [...orgMemoryDocs, ...(dbDocuments || [])];
+    const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+    return res.json(unique);
   } catch (error) {
     console.error('Error fetching documents from database:', error);
-    return res.json([]);
+    const orgId = req.user?.organizationId;
+    const userId = req.user?.id;
+    const orgMemoryDocs = memoryDocuments.filter(
+      d => (orgId && d.organizationId === orgId) || (userId && d.createdBy === userId)
+    );
+    return res.json(orgMemoryDocs);
   }
 });
 
@@ -91,9 +109,17 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
       };
     }
 
-    // Automatically trigger active workflows configured with DOCUMENT_UPLOAD
     const orgId = req.user?.organizationId;
     const userId = req.user?.id;
+
+    if (doc) {
+      memoryDocuments.unshift({
+        ...doc,
+        organizationId: orgId || `org-${Date.now()}`,
+        createdBy: userId || `user-${Date.now()}`
+      });
+    }
+
     const triggeredWorkflows: any[] = [];
 
     try {

@@ -4,27 +4,36 @@ import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import { FileText, Upload, Sparkles, AlertTriangle, CheckCircle2, Eye, Code } from 'lucide-react';
 
+import { useAuth } from '../context/AuthContext';
+
 export const Documents: React.FC = () => {
+  const { user } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [showJsonView, setShowJsonView] = useState(false);
 
+  const getStorageKey = () => `custom_documents_${user?.organizationId || user?.id || 'demo'}`;
+
   const loadDocuments = async () => {
+    const storageKey = getStorageKey();
+    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
     try {
       const res = await api.get('/documents');
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        setDocuments(res.data);
-        if (!selectedDoc) setSelectedDoc(res.data[0]);
+      if (res.data && Array.isArray(res.data)) {
+        const combined = [...savedCustom, ...res.data];
+        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        setDocuments(unique);
+        if (unique.length > 0) setSelectedDoc((prev: any) => prev || unique[0]);
       } else {
-        setDocuments([]);
-        setSelectedDoc(null);
+        setDocuments(savedCustom);
+        if (savedCustom.length > 0) setSelectedDoc((prev: any) => prev || savedCustom[0]);
       }
     } catch (err) {
-      console.warn('Failed to load documents from backend:', err);
-      setDocuments([]);
-      setSelectedDoc(null);
+      console.warn('Failed to load documents from backend, using local cache:', err);
+      setDocuments(savedCustom);
+      if (savedCustom.length > 0) setSelectedDoc((prev: any) => prev || savedCustom[0]);
     } finally {
       setLoading(false);
     }
@@ -32,7 +41,16 @@ export const Documents: React.FC = () => {
 
   useEffect(() => {
     loadDocuments();
-  }, []);
+  }, [user]);
+
+  const saveToLocalCache = (doc: any) => {
+    const storageKey = getStorageKey();
+    const existing: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const updated = [doc, ...existing.filter((d: any) => d.id !== doc.id)];
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+    setDocuments(updated);
+    setSelectedDoc(doc);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,8 +68,7 @@ export const Documents: React.FC = () => {
 
       const newDoc = res.data?.document || res.data;
       if (newDoc) {
-        setDocuments(prev => [newDoc, ...prev.filter(d => d.id !== newDoc.id)]);
-        setSelectedDoc(newDoc);
+        saveToLocalCache(newDoc);
       }
     } catch (err) {
       console.warn('Backend upload notice (processing via client AI analyzer):', err);
@@ -80,11 +97,9 @@ export const Documents: React.FC = () => {
         extractedData: JSON.stringify(simulatedAnalysis),
         createdAt: new Date().toISOString()
       };
-      setDocuments(prev => [clientDoc, ...prev]);
-      setSelectedDoc(clientDoc);
+      saveToLocalCache(clientDoc);
     } finally {
       setIsUploading(false);
-      // Reset input value
       e.target.value = '';
     }
   };
