@@ -3,7 +3,7 @@ import api from '../api/client';
 import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import { Modal } from '../components/UI/Modal';
-import { ShieldCheck, Sparkles, CheckCircle2, XCircle, AlertTriangle, FileText, Bot } from 'lucide-react';
+import { ShieldCheck, Sparkles, CheckCircle2, XCircle, AlertTriangle, FileText, Bot, GitMerge } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { Plus } from 'lucide-react';
@@ -168,6 +168,10 @@ export const Approvals: React.FC = () => {
                 </div>
 
                 <h3 className="font-bold text-base text-white">{appr.task?.title || 'Approval Sign-off Request'}</h3>
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-indigo-400">
+                  <GitMerge className="h-3 w-3 shrink-0" />
+                  <span>Linked Pipeline: <strong className="text-slate-200">{appr.task?.workflow?.title || appr.workflowTitle || 'Enterprise AI Workflow Pipeline'}</strong></span>
+                </div>
                 <p className="text-xs text-slate-400 leading-relaxed">{appr.task?.description || 'No description provided.'}</p>
 
                 {/* Gemini AI Recommendation Box */}
