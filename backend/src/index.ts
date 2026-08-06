@@ -83,10 +83,14 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   });
 });
 
-const PORT = parseInt(env.PORT, 10) || 5000;
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`🚀 AI Workflow Automation Backend API running on port ${PORT}`);
-  console.log(`📡 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`====================================================`);
-});
+const PORT = parseInt(env.PORT, 10) || 5050;
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`🚀 AI Workflow Automation Backend API running on port ${PORT}`);
+    console.log(`📡 Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`====================================================`);
+  });
+}
+
+export default app;
