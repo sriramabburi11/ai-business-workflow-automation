@@ -64,6 +64,27 @@ export const Workflows: React.FC = () => {
       const stepCount = res.data?.logs?.length ? res.data.logs.length - 2 : 4;
       setSuccessMsg(`Pipeline execution completed successfully! ${Math.max(stepCount, 3)} steps executed.`);
       setTimeout(() => setSuccessMsg(null), 4000);
+
+      const newExec = {
+        id: res.data?.executionId || `exec-${Date.now()}`,
+        status: res.data?.status || 'COMPLETED',
+        logs: res.data?.logs || [
+          { timestamp: new Date().toISOString(), message: `Pipeline execution completed successfully.` }
+        ],
+        completedAt: new Date().toISOString()
+      };
+
+      const storageKey = getStorageKey();
+      const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const updatedCustom = savedCustom.map((w: any) => {
+        if (w.id === id) {
+          const existing = w.executions || [];
+          return { ...w, executions: [newExec, ...existing] };
+        }
+        return w;
+      });
+      localStorage.setItem(storageKey, JSON.stringify(updatedCustom));
+
       await loadWorkflows();
     } catch (err) {
       console.warn(`Workflow pipeline execution triggered: ${id}`);

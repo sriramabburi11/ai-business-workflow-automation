@@ -46,23 +46,43 @@ export const WorkflowDetail: React.FC = () => {
     setExecuting(true);
     try {
       const res = await api.post(`/workflows/${id}/execute`);
-      if (res.data && res.data.logs) {
-        setWorkflow((prev: any) => {
-          if (!prev) return prev;
-          const newExec = {
-            id: res.data.executionId || `exec-${Date.now()}`,
-            status: res.data.status || 'COMPLETED',
-            logs: res.data.logs,
-            completedAt: new Date().toISOString()
-          };
-          const existingExecs = prev.executions || [];
-          return {
-            ...prev,
-            executions: [newExec, ...existingExecs]
-          };
+      const newExec = {
+        id: res.data?.executionId || `exec-${Date.now()}`,
+        status: res.data?.status || 'COMPLETED',
+        logs: res.data?.logs || [
+          { timestamp: new Date().toISOString(), message: `Pipeline execution completed successfully.` }
+        ],
+        completedAt: new Date().toISOString()
+      };
+
+      setWorkflow((prev: any) => {
+        if (!prev) return prev;
+        const existingExecs = prev.executions || [];
+        return {
+          ...prev,
+          executions: [newExec, ...existingExecs]
+        };
+      });
+
+      // Synchronize new execution into local storage cache
+      const storageKey = `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
+      const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      let found = false;
+      const updatedCustom = savedCustom.map((w: any) => {
+        if (w.id === id) {
+          found = true;
+          const existing = w.executions || [];
+          return { ...w, executions: [newExec, ...existing] };
+        }
+        return w;
+      });
+      if (!found && workflow) {
+        updatedCustom.unshift({
+          ...workflow,
+          executions: [newExec, ...(workflow.executions || [])]
         });
       }
-      await loadWorkflow();
+      localStorage.setItem(storageKey, JSON.stringify(updatedCustom));
     } catch (err) {
       console.error('Execution error:', err);
     } finally {
