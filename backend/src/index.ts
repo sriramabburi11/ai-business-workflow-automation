@@ -42,18 +42,33 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 // Serve uploaded static files safely
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// API Routes
+// Dual Route Mounts (Support both local /api prefix and Vercel serverless function rewrites)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/workflows', workflowRoutes);
+app.use('/workflows', workflowRoutes);
+
 app.use('/api/ai', aiRoutes);
+app.use('/ai', aiRoutes);
+
 app.use('/api/tasks', taskRoutes);
+app.use('/tasks', taskRoutes);
+
 app.use('/api/approvals', approvalRoutes);
+app.use('/approvals', approvalRoutes);
+
 app.use('/api/documents', documentRoutes);
+app.use('/documents', documentRoutes);
+
 app.use('/api/analytics', analyticsRoutes);
+app.use('/analytics', analyticsRoutes);
+
 app.use('/api/organizations', organizationRoutes);
+app.use('/organizations', organizationRoutes);
 
 // Health Check Endpoint
-app.get('/api/health', (_req, res) => {
+app.get(['/api/health', '/health'], (_req, res) => {
   res.json({
     status: 'HEALTHY',
     service: 'AI Business Workflow Automation Platform API',
@@ -63,7 +78,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Root route handler
-app.get('/', (_req, res) => {
+app.get(['/api', '/'], (_req, res) => {
   res.json({
     message: 'Welcome to AI Business Workflow Automation Platform Backend API',
     docs: '/api/health'
