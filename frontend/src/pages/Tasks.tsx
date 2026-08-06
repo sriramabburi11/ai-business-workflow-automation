@@ -36,7 +36,7 @@ export const Tasks: React.FC = () => {
   const filteredTasks = tasks.filter(t => statusFilter === 'ALL' || t.status === statusFilter);
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">

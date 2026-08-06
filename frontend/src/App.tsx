@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar } from './components/Navigation/Sidebar';
@@ -22,6 +22,7 @@ import { Profile } from './pages/Profile';
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -36,10 +37,10 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   return (
-    <div className="flex min-h-screen bg-[#080c14]">
-      <Sidebar />
+    <div className="flex min-h-screen bg-[#080c14] overflow-x-hidden">
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Navbar />
+        <Navbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>

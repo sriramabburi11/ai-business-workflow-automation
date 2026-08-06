@@ -53,7 +53,7 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       <div>
         <div className="flex items-center gap-2 text-xs text-indigo-400 font-mono font-semibold">
           <SettingsIcon className="h-3.5 w-3.5" /> WORKSPACE CONFIGURATION & GOVERNANCE

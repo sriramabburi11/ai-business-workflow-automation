@@ -48,7 +48,7 @@ export const Approvals: React.FC = () => {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       <div>
         <div className="flex items-center gap-2 text-xs text-amber-400 font-mono font-semibold">
           <ShieldCheck className="h-3.5 w-3.5" /> AI GOVERNANCE & APPROVAL ENGINE
