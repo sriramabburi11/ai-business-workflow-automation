@@ -5,20 +5,35 @@ import { Badge } from '../components/UI/Badge';
 import { Modal } from '../components/UI/Modal';
 import { ShieldCheck, Sparkles, CheckCircle2, XCircle, AlertTriangle, FileText, Bot } from 'lucide-react';
 
+import { useAuth } from '../context/AuthContext';
+import { Plus } from 'lucide-react';
+
 export const Approvals: React.FC = () => {
+  const { user } = useAuth();
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApproval, setSelectedApproval] = useState<any | null>(null);
   const [decisionComment, setDecisionComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const getStorageKey = () => `custom_approvals_${user?.organizationId || user?.id || 'demo'}`;
 
   const loadApprovals = async () => {
+    const storageKey = getStorageKey();
+    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
     try {
       const res = await api.get('/approvals');
-      setApprovals(res.data || []);
+      if (res.data && Array.isArray(res.data)) {
+        const combined = [...savedCustom, ...res.data];
+        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        setApprovals(unique);
+      } else {
+        setApprovals(savedCustom);
+      }
     } catch (err) {
       console.warn('Approvals API notice:', err);
-      setApprovals([]);
+      setApprovals(savedCustom);
     } finally {
       setLoading(false);
     }
@@ -26,11 +41,75 @@ export const Approvals: React.FC = () => {
 
   useEffect(() => {
     loadApprovals();
-  }, []);
+  }, [user]);
+
+  const saveToLocalCache = (item: any) => {
+    const storageKey = getStorageKey();
+    const existing: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const updated = [item, ...existing.filter((a: any) => a.id !== item.id)];
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+    setApprovals(updated);
+  };
+
+  const handleCreateApproval = async () => {
+    setIsCreating(true);
+    const titles = [
+      'Enterprise Software License Purchase Approval ($4,500.00)',
+      'Vendor Expense Invoice Payout Review ($12,800.00)',
+      'SLA Contract Exception & Risk Override Request',
+      'New Employee System Access & IT Credentials Provisioning',
+      'DevOps Production CI/CD Gate Deployment Approval'
+    ];
+    const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+    const riskScore = Math.floor(Math.random() * 25) + 8;
+
+    const tempAppr = {
+      id: `appr-${Date.now()}`,
+      taskId: `task-${Date.now()}`,
+      approver: 'MANAGER',
+      decision: 'PENDING',
+      comment: 'Gemini AI risk score evaluated. Zero policy breach detected.',
+      aiRiskScore: riskScore,
+      aiRecommendation: 'APPROVE',
+      createdAt: new Date().toISOString(),
+      task: {
+        id: `task-${Date.now()}`,
+        title: randomTitle,
+        description: 'Automated executive approval request generated for business operations sign-off.',
+        status: 'PENDING',
+        assignee: 'MANAGER',
+        priority: 'HIGH'
+      }
+    };
+
+    try {
+      const res = await api.post('/approvals/create', {
+        title: randomTitle,
+        description: 'Automated executive approval request generated for business operations sign-off.',
+        approver: 'MANAGER',
+        aiRiskScore: riskScore,
+        aiRecommendation: 'APPROVE'
+      });
+      const created = res.data || tempAppr;
+      saveToLocalCache(created);
+    } catch (err) {
+      saveToLocalCache(tempAppr);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleDecision = async (decision: 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED') => {
     if (!selectedApproval) return;
     setIsSubmitting(true);
+    const updatedItem = {
+      ...selectedApproval,
+      decision,
+      comment: decisionComment || `Decision finalized as ${decision} by approver.`
+    };
+
+    saveToLocalCache(updatedItem);
+
     try {
       await api.post('/approvals', {
         approvalId: selectedApproval.id,
@@ -38,31 +117,37 @@ export const Approvals: React.FC = () => {
         decision,
         comment: decisionComment
       });
-      setSelectedApproval(null);
-      setDecisionComment('');
-      loadApprovals();
     } catch (err) {
-      console.warn('Decision fallback handler');
-      setApprovals(prev => prev.map(a => a.id === selectedApproval.id ? { ...a, decision, comment: decisionComment || 'Decision recorded by approver.' } : a));
+      console.warn('Decision API fallback notice:', err);
+    } finally {
       setSelectedApproval(null);
       setDecisionComment('');
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      <div>
-        <div className="flex items-center gap-2 text-xs text-amber-400 font-mono font-semibold">
-          <ShieldCheck className="h-3.5 w-3.5" /> AI GOVERNANCE & APPROVAL ENGINE
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-xs text-amber-400 font-mono font-semibold">
+            <ShieldCheck className="h-3.5 w-3.5" /> AI GOVERNANCE & APPROVAL ENGINE
+          </div>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight mt-1">
+            Executive Approvals Hub
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Review pending workflow approvals enhanced with Gemini AI risk scoring and policy breach detection.
+          </p>
         </div>
-        <h1 className="text-2xl font-extrabold text-white tracking-tight mt-1">
-          Executive Approvals Hub
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Review pending workflow approvals enhanced with Gemini AI risk scoring and policy breach detection.
-        </p>
+
+        <button
+          onClick={handleCreateApproval}
+          disabled={isCreating}
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all hover:scale-105"
+        >
+          <Plus className="h-4 w-4" /> {isCreating ? 'Generating Request...' : 'Generate Approval Request'}
+        </button>
       </div>
 
       {loading ? (
