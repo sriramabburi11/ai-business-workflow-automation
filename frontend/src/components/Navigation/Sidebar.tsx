@@ -23,8 +23,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  pendingApprovalsCount = 1,
-  pendingTasksCount = 2,
+  pendingApprovalsCount = 0,
+  pendingTasksCount = 0,
   isOpen = false,
   onClose
 }) => {

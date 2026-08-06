@@ -6,27 +6,43 @@ const router = Router();
 const prisma = new PrismaClient();
 
 // GET /analytics
-router.get('/', authenticateToken, async (_req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const totalWorkflows = await prisma.workflow.count();
-    const activeWorkflows = await prisma.workflow.count({ where: { status: 'ACTIVE' } });
-    const totalTasks = await prisma.task.count();
-    const completedTasks = await prisma.task.count({ where: { status: 'COMPLETED' } });
-    const pendingTasks = await prisma.task.count({ where: { status: 'PENDING' } });
+    const orgId = req.user?.organizationId;
+    const userId = req.user?.id;
 
-    const totalApprovals = await prisma.approval.count();
-    const approvedCount = await prisma.approval.count({ where: { decision: 'APPROVED' } });
-    const rejectedCount = await prisma.approval.count({ where: { decision: 'REJECTED' } });
-    const pendingApprovalsCount = await prisma.approval.count({ where: { decision: 'PENDING' } });
+    if (!orgId && !userId) {
+      return res.json({
+        metrics: { totalWorkflows: 0, activeWorkflows: 0, totalTasks: 0, completedTasks: 0, pendingTasks: 0, totalApprovals: 0, approvedCount: 0, rejectedCount: 0, pendingApprovalsCount: 0, approvalRate: 0, totalDocuments: 0, aiHoursSaved: 0, aiEfficiencyScore: '0%' },
+        executionTrends: [],
+        auditLogs: [],
+        recentExecutions: []
+      });
+    }
 
-    const totalDocuments = await prisma.document.count();
+    const wfFilter: any = orgId ? { organizationId: orgId } : { createdBy: userId };
+
+    const totalWorkflows = await prisma.workflow.count({ where: wfFilter });
+    const activeWorkflows = await prisma.workflow.count({ where: { ...wfFilter, status: 'ACTIVE' } });
+    const totalTasks = await prisma.task.count({ where: { workflow: wfFilter } });
+    const completedTasks = await prisma.task.count({ where: { status: 'COMPLETED', workflow: wfFilter } });
+    const pendingTasks = await prisma.task.count({ where: { status: 'PENDING', workflow: wfFilter } });
+
+    const totalApprovals = await prisma.approval.count({ where: { task: { workflow: wfFilter } } });
+    const approvedCount = await prisma.approval.count({ where: { decision: 'APPROVED', task: { workflow: wfFilter } } });
+    const rejectedCount = await prisma.approval.count({ where: { decision: 'REJECTED', task: { workflow: wfFilter } } });
+    const pendingApprovalsCount = await prisma.approval.count({ where: { decision: 'PENDING', task: { workflow: wfFilter } } });
+
+    const totalDocuments = await prisma.document.count({ where: { workflow: wfFilter } });
     const auditLogs = await prisma.auditLog.findMany({
+      where: userId ? { userId } : { userId: 'none' },
       include: { user: { select: { name: true, email: true, role: true } } },
       orderBy: { createdAt: 'desc' },
       take: 25
     });
 
     const recentExecutions = await prisma.workflowExecution.findMany({
+      where: { workflow: wfFilter },
       include: { workflow: { select: { title: true } } },
       orderBy: { startedAt: 'desc' },
       take: 10
@@ -43,10 +59,10 @@ router.get('/', authenticateToken, async (_req: AuthRequest, res: Response) => {
         approvedCount,
         rejectedCount,
         pendingApprovalsCount,
-        approvalRate: totalApprovals > 0 ? Math.round((approvedCount / totalApprovals) * 100) : 92,
+        approvalRate: totalApprovals > 0 ? Math.round((approvedCount / totalApprovals) * 100) : 0,
         totalDocuments,
-        aiHoursSaved: Math.round(totalWorkflows * 14.5 + totalDocuments * 2.8),
-        aiEfficiencyScore: '96.4%'
+        aiHoursSaved: totalWorkflows > 0 ? Math.round(totalWorkflows * 14.5 + totalDocuments * 2.8) : 0,
+        aiEfficiencyScore: totalWorkflows > 0 ? '96.4%' : '0%'
       },
       executionTrends: [
         { day: 'Mon', executions: 42, approvals: 18, docsProcessed: 12 },

@@ -9,9 +9,20 @@ const prisma = new PrismaClient();
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { status } = req.query;
+    const orgId = req.user?.organizationId;
+    const userId = req.user?.id;
+
+    if (!orgId && !userId) {
+      return res.json([]);
+    }
 
     const whereClause: any = {};
     if (status) whereClause.decision = String(status);
+    if (orgId) {
+      whereClause.workflow = { organizationId: orgId };
+    } else {
+      whereClause.workflow = { createdBy: userId };
+    }
 
     const approvals = await prisma.approval.findMany({
       where: whereClause,
@@ -36,7 +47,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { approvalId, taskId, decision, comment } = req.body;
-    const userId = req.user?.id || 'demo-user-123';
+    const userId = req.user?.id || 'unknown-user';
 
     if (!decision || !['APPROVED', 'REJECTED', 'CHANGES_REQUESTED'].includes(decision)) {
       return res.status(400).json({ error: 'Valid decision (APPROVED, REJECTED, CHANGES_REQUESTED) is required' });

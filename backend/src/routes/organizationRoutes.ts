@@ -10,8 +10,12 @@ const prisma = new PrismaClient();
 router.get('/team', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const orgId = req.user?.organizationId;
+    if (!orgId) {
+      return res.json([]);
+    }
+
     const users = await prisma.user.findMany({
-      where: orgId ? { organizationId: orgId } : undefined,
+      where: { organizationId: orgId },
       select: {
         id: true,
         name: true,
@@ -52,7 +56,7 @@ router.post('/invite', authenticateToken, requireRole(['ADMIN', 'MANAGER']), asy
     await prisma.auditLog.create({
       data: {
         action: 'MEMBER_INVITED',
-        userId: req.user?.id || 'demo-user-123',
+        userId: req.user?.id || 'unknown-user',
         details: JSON.stringify({ invitedEmail: email, assignedRole: user.role })
       }
     });

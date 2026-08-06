@@ -11,52 +11,6 @@ export const Documents: React.FC = () => {
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [showJsonView, setShowJsonView] = useState(false);
 
-  const sampleDocuments = [
-    {
-      id: 'doc-1',
-      fileName: 'Acme_Cloud_Invoice_2026.pdf',
-      fileUrl: '/uploads/sample_invoice.pdf',
-      mimeType: 'application/pdf',
-      extractedData: JSON.stringify({
-        documentType: 'Invoice / Commercial Receipt',
-        extractedFields: {
-          vendorName: 'Acme Cloud Solutions Inc.',
-          invoiceNumber: 'INV-2026-8942',
-          issueDate: '2026-07-28',
-          subtotalAmount: '$4,250.00',
-          taxAmount: '$340.00',
-          totalAmount: '$4,590.00',
-          currency: 'USD'
-        },
-        summary: 'Commercial invoice for enterprise cloud infrastructure services and dedicated hosting for July 2026.',
-        riskFlags: ['Total amount exceeds standard $2,500 auto-approval threshold', 'New bank routing details provided'],
-        confidenceScore: 0.98
-      }),
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'doc-2',
-      fileName: 'Master_Services_Agreement_2026.pdf',
-      fileUrl: '/uploads/sample_agreement.pdf',
-      mimeType: 'application/pdf',
-      extractedData: JSON.stringify({
-        documentType: 'Business Contract / Agreement',
-        extractedFields: {
-          partyA: 'Global Tech Enterprises LLC',
-          partyB: 'Smart Automation Corp.',
-          effectiveDate: '2026-08-01',
-          contractDuration: '12 Months',
-          contractValue: '$18,000.00',
-          terminationNoticeDays: '30 Days'
-        },
-        summary: 'Standard master services agreement governing business automation software licensing and support.',
-        riskFlags: ['Auto-renewal clause active unless cancelled 30 days prior'],
-        confidenceScore: 0.95
-      }),
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    }
-  ];
-
   const loadDocuments = async () => {
     try {
       const res = await api.get('/documents');
@@ -64,13 +18,13 @@ export const Documents: React.FC = () => {
         setDocuments(res.data);
         if (!selectedDoc) setSelectedDoc(res.data[0]);
       } else {
-        setDocuments(sampleDocuments);
-        if (!selectedDoc) setSelectedDoc(sampleDocuments[0]);
+        setDocuments([]);
+        setSelectedDoc(null);
       }
     } catch (err) {
-      console.warn('Failed to load documents from backend, using fallback:', err);
-      setDocuments(sampleDocuments);
-      if (!selectedDoc) setSelectedDoc(sampleDocuments[0]);
+      console.warn('Failed to load documents from backend:', err);
+      setDocuments([]);
+      setSelectedDoc(null);
     } finally {
       setLoading(false);
     }

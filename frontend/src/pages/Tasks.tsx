@@ -9,70 +9,13 @@ export const Tasks: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  const sampleTasks = [
-    {
-      id: 'task-1',
-      title: 'Approve Cloud Infrastructure Invoice #INV-2026-8942',
-      description: 'Vendor expense for Acme Cloud Services ($4,590.00). Invoiced on 2026-07-28.',
-      assignee: 'MANAGER',
-      status: 'PENDING',
-      priority: 'HIGH',
-      dueDate: '2026-08-10',
-      workflow: { title: 'AI Automated Expense & Vendor Disbursement' }
-    },
-    {
-      id: 'task-4',
-      title: 'Audit Master Services Agreement #MSA-2026-441',
-      description: 'Contract value $45,000.00. Gemini AI flagged 30-day auto-renewal clause liability.',
-      assignee: 'ADMIN',
-      status: 'PENDING',
-      priority: 'URGENT',
-      dueDate: '2026-08-15',
-      workflow: { title: 'Customer Escalation & Contract Renewal AI Review' }
-    },
-    {
-      id: 'task-2',
-      title: 'Provision MacBook Pro & Workspace Accounts for Senior Dev',
-      description: 'Hardware requisition ticket & e-signatures for incoming Senior Architect.',
-      assignee: 'ADMIN',
-      status: 'IN_PROGRESS',
-      priority: 'MEDIUM',
-      dueDate: '2026-08-12',
-      workflow: { title: 'AI HR Employee Onboarding & Identity Verification' }
-    },
-    {
-      id: 'task-5',
-      title: 'Verify HIPAA Compliance Sign-off for Q3 Medical Records',
-      description: 'Automated PII data masking verification for hospital audit log.',
-      assignee: 'HR',
-      status: 'IN_PROGRESS',
-      priority: 'HIGH',
-      dueDate: '2026-08-18',
-      workflow: { title: 'HIPAA Compliance Audit & Patient Data Masking' }
-    },
-    {
-      id: 'task-3',
-      title: 'Reimburse Travel Expense - Q3 Tech Summit',
-      description: 'Flight and hotel receipts submitted by Alex Rivera ($840.00). Paid out via ACH.',
-      assignee: 'FINANCE',
-      status: 'COMPLETED',
-      priority: 'LOW',
-      dueDate: '2026-08-05',
-      workflow: { title: 'AI Automated Expense & Vendor Disbursement' }
-    }
-  ];
-
   const loadTasks = async () => {
     try {
       const res = await api.get('/tasks');
-      if (res.data && res.data.length > 0) {
-        setTasks(res.data);
-      } else {
-        setTasks(sampleTasks);
-      }
+      setTasks(res.data || []);
     } catch (err) {
-      console.warn('Tasks API fallback activated:', err);
-      setTasks(sampleTasks);
+      console.warn('Tasks API notice:', err);
+      setTasks([]);
     } finally {
       setLoading(false);
     }

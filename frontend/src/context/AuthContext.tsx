@@ -41,38 +41,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const res = await api.get('/auth/me');
           if (res.data?.user) {
             setUser(res.data.user);
-            setOrganization(res.data.organization || { id: 'demo-org-123', name: 'Smart Automation Enterprise' });
+            setOrganization(res.data.organization || { id: res.data.user.organizationId || 'org-demo', name: 'Organization' });
           } else {
-            setUser({
-              id: 'demo-user-123',
-              name: 'Sarah Connor',
-              email: 'sarah.connor@enterprise.io',
-              role: 'ADMIN',
-              organizationId: 'demo-org-123'
-            });
-            setOrganization({ id: 'demo-org-123', name: 'Smart Automation Enterprise' });
+            setUser(null);
+            setOrganization(null);
           }
         } catch (error) {
           console.warn('Auth session fetch fallback:', error);
-          setUser({
-            id: 'demo-user-123',
-            name: 'Sarah Connor',
-            email: 'sarah.connor@enterprise.io',
-            role: 'ADMIN',
-            organizationId: 'demo-org-123'
-          });
-          setOrganization({ id: 'demo-org-123', name: 'Smart Automation Enterprise' });
+          // Only clear user if not a guest demo token
+          if (!token.includes('guest-demo-token')) {
+            setUser(null);
+            setOrganization(null);
+          }
         }
       } else {
-        // Fallback default user for instant access
-        setUser({
-          id: 'demo-user-123',
-          name: 'Sarah Connor',
-          email: 'sarah.connor@enterprise.io',
-          role: 'ADMIN',
-          organizationId: 'demo-org-123'
-        });
-        setOrganization({ id: 'demo-org-123', name: 'Smart Automation Enterprise' });
+        setUser(null);
+        setOrganization(null);
       }
       setIsLoading(false);
     };
@@ -81,12 +65,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [token]);
 
   const login = async (email: string, password: string) => {
+    localStorage.clear();
+    sessionStorage.clear();
     try {
       const res = await api.post('/auth/login', { email, password });
       const { token: newToken, user: userData, organization: orgData } = res.data;
       localStorage.setItem('token', newToken || 'guest-demo-token-jwt-2026');
       setToken(newToken || 'guest-demo-token-jwt-2026');
-      setUser(userData || { id: 'demo-user-123', name: 'Sarah Connor', email, role: 'ADMIN' });
+      setUser(userData || { id: 'demo-user-123', name: 'Sarah Connor', email, role: 'ADMIN', organizationId: 'demo-org-123' });
       setOrganization(orgData || { id: 'demo-org-123', name: 'Smart Automation Enterprise' });
     } catch (err) {
       console.warn('Login fallback activated:', err);
@@ -105,23 +91,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (name: string, email: string, password: string, orgName?: string) => {
+    localStorage.clear();
+    sessionStorage.clear();
     try {
       const res = await api.post('/auth/register', { name, email, password, organizationName: orgName });
       const { token: newToken, user: userData, organization: orgData } = res.data;
-      localStorage.setItem('token', newToken || 'guest-demo-token-jwt-2026');
-      setToken(newToken || 'guest-demo-token-jwt-2026');
-      setUser(userData || { id: 'demo-user-123', name, email, role: 'ADMIN' });
-      setOrganization(orgData || { id: 'demo-org-123', name: orgName || 'Smart Automation Enterprise' });
+      const cleanToken = newToken || `reg-token-${Date.now()}`;
+      localStorage.setItem('token', cleanToken);
+      setToken(cleanToken);
+      setUser(userData);
+      setOrganization(orgData);
     } catch (err) {
-      const demoToken = 'guest-demo-token-jwt-2026';
-      localStorage.setItem('token', demoToken);
-      setToken(demoToken);
-      setUser({ id: 'demo-user-123', name, email, role: 'ADMIN' });
-      setOrganization({ id: 'demo-org-123', name: orgName || 'Smart Automation Enterprise' });
+      const timestamp = Date.now();
+      const fallbackOrgId = `org-user-${timestamp}`;
+      const fallbackUser = {
+        id: `user-${timestamp}`,
+        name,
+        email,
+        role: 'ADMIN',
+        organizationId: fallbackOrgId
+      };
+      const fallbackOrg = {
+        id: fallbackOrgId,
+        name: orgName || `${name}'s Organization`
+      };
+      const fallbackToken = `reg-token-${timestamp}-${fallbackUser.id}-${fallbackOrgId}`;
+      localStorage.setItem('token', fallbackToken);
+      setToken(fallbackToken);
+      setUser(fallbackUser);
+      setOrganization(fallbackOrg);
     }
   };
 
   const guestLogin = () => {
+    localStorage.clear();
+    sessionStorage.clear();
     const demoToken = 'guest-demo-token-jwt-2026';
     localStorage.setItem('token', demoToken);
     setToken(demoToken);
@@ -139,7 +143,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.clear();
+    sessionStorage.clear();
     setToken(null);
     setUser(null);
     setOrganization(null);

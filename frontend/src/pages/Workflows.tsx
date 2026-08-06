@@ -1,77 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import { GitMerge, Sparkles, Play, Trash2, Edit3, Search, Filter } from 'lucide-react';
 
 export const Workflows: React.FC = () => {
+  const { user } = useAuth();
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTrigger, setFilterTrigger] = useState('ALL');
 
-  const sampleWorkflows = [
-    {
-      id: 'wf-1',
-      title: 'AI Automated Expense & Vendor Disbursement',
-      description: 'Ingests vendor receipts, runs AI OCR extraction, flags compliance anomalies, and routes for manager approval.',
-      trigger: 'DOCUMENT_UPLOAD',
-      status: 'ACTIVE',
-      steps: [1, 2, 3, 4, 5]
-    },
-    {
-      id: 'wf-2',
-      title: 'AI HR Employee Onboarding & Identity Verification',
-      description: 'Automates identity document checks, IT hardware provisioning tasks, e-signatures, and Slack account generation.',
-      trigger: 'MANUAL',
-      status: 'ACTIVE',
-      steps: [1, 2, 3, 4]
-    },
-    {
-      id: 'wf-3',
-      title: 'Customer Escalation & Contract Renewal AI Review',
-      description: 'Evaluates high-tier enterprise SLAs, analyzes legal contract terms with Gemini AI, and escalates at-risk customer accounts.',
-      trigger: 'SCHEDULE',
-      status: 'ACTIVE',
-      steps: [1, 2, 3]
-    },
-    {
-      id: 'wf-4',
-      title: 'Enterprise IT Hardware Requisition & System Access',
-      description: 'Streamlines laptop equipment allocation, security badge approval, and Google Workspace account creation.',
-      trigger: 'API_WEBHOOK',
-      status: 'ACTIVE',
-      steps: [1, 2, 3, 4]
-    },
-    {
-      id: 'wf-5',
-      title: 'HIPAA Compliance Audit & Patient Data Masking',
-      description: 'Scans healthcare records for sensitive PII data, executes automated data masking, and logs compliance audits.',
-      trigger: 'SCHEDULE',
-      status: 'ACTIVE',
-      steps: [1, 2, 3, 4]
-    }
-  ];
+  const getStorageKey = () => `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
 
   const loadWorkflows = async () => {
-    const savedCustom: any[] = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
+    const storageKey = getStorageKey();
+    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
     try {
       const res = await api.get('/workflows');
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.data && Array.isArray(res.data)) {
         const combined = [...savedCustom, ...res.data];
         const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
         setWorkflows(unique);
       } else {
-        const combined = [...savedCustom, ...sampleWorkflows];
-        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-        setWorkflows(unique);
+        setWorkflows(savedCustom);
       }
     } catch (err) {
-      console.warn('Workflows fallback activated:', err);
-      const combined = [...savedCustom, ...sampleWorkflows];
-      const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-      setWorkflows(unique);
+      console.warn('Workflows fetch notice:', err);
+      setWorkflows(savedCustom);
     } finally {
       setLoading(false);
     }
@@ -79,7 +37,7 @@ export const Workflows: React.FC = () => {
 
   useEffect(() => {
     loadWorkflows();
-  }, []);
+  }, [user]);
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this workflow?')) {
@@ -88,9 +46,10 @@ export const Workflows: React.FC = () => {
       } catch (err) {
         console.warn('Delete workflow API fallback');
       } finally {
-        const savedCustom: any[] = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
+        const storageKey = getStorageKey();
+        const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
         const updatedCustom = savedCustom.filter(w => w.id !== id);
-        localStorage.setItem('custom_workflows', JSON.stringify(updatedCustom));
+        localStorage.setItem(storageKey, JSON.stringify(updatedCustom));
         setWorkflows(prev => prev.filter(w => w.id !== id));
       }
     }
@@ -218,11 +177,19 @@ export const Workflows: React.FC = () => {
           ))}
         </div>
       ) : (
-        <Card className="p-12 text-center space-y-3">
-          <GitMerge className="h-10 w-10 text-slate-600 mx-auto" />
-          <p className="text-sm font-semibold text-slate-300">No workflows found matching filter</p>
-          <Link to="/workflows/new" className="inline-block text-xs text-indigo-400 font-semibold hover:underline">
-            Create your first workflow using AI Prompt Engine →
+        <Card className="p-12 text-center space-y-4 border-dashed border-slate-800">
+          <GitMerge className="h-12 w-12 text-slate-600 mx-auto" />
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-slate-200">No Workflows Available</h3>
+            <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+              As a newly registered user, you don't have any active workflows yet. Describe your automation requirements to generate your first custom AI workflow!
+            </p>
+          </div>
+          <Link
+            to="/workflows/new"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold shadow-lg shadow-indigo-500/20 transition-all hover:scale-105"
+          >
+            <Sparkles className="h-4 w-4" /> Create Your First AI Workflow
           </Link>
         </Card>
       )}

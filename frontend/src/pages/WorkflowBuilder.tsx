@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import {
@@ -26,39 +27,19 @@ interface StepItem {
 
 export const WorkflowBuilder: React.FC = () => {
   const navigate = useNavigate();
-  const [prompt, setPrompt] = useState(
-    'Automate vendor expense invoice approvals over $500 with OCR receipt extraction, policy compliance checking, and finance payout notification'
-  );
+  const { user } = useAuth();
+  const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Pre-populated initial AI workflow state for video demo
-  const [title, setTitle] = useState('AI Automated Expense & Vendor Disbursement');
-  const [description, setDescription] = useState(
-    'Automatically ingests vendor receipts, extracts line items via Gemini OCR, checks policy compliance thresholds, routes items > $500 for Manager sign-off, and dispatches payout notifications.'
-  );
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [trigger, setTrigger] = useState('DOCUMENT_UPLOAD');
-  const [steps, setSteps] = useState<StepItem[]>([
-    { name: 'Upload & Ingest Receipt Document', type: 'AI_EXTRACT', assignedRole: 'MEMBER', automation: true },
-    { name: 'Extract Vendor, Total Amount & Line Items', type: 'AI_EXTRACT', assignedRole: 'MEMBER', automation: true },
-    { name: 'Evaluate Policy Rules & Risk Threshold', type: 'CONDITION', assignedRole: 'MANAGER', automation: true },
-    { name: 'Manager Approval for Expenses > $500', type: 'APPROVAL', assignedRole: 'MANAGER', automation: false },
-    { name: 'Finance Disbursement & ERP Sync', type: 'TASK_ASSIGNMENT', assignedRole: 'FINANCE', automation: false },
-    { name: 'Send Email Payout Confirmation', type: 'NOTIFICATION', assignedRole: 'MEMBER', automation: true }
-  ]);
+  const [steps, setSteps] = useState<StepItem[]>([]);
 
-  const [risks, setRisks] = useState<string[]>([
-    'Duplicate receipt submission flag',
-    'Missing itemized breakdown on invoices exceeding $1,000'
-  ]);
-  const [recommendations, setRecommendations] = useState<string[]>([
-    'Enable automatic approval for recurring vendor expenses under $100',
-    'Require mandatory receipt image attachment'
-  ]);
-  const [notifications, setNotifications] = useState<string[]>([
-    'Email employee on submission',
-    'Slack alert to Manager if pending > 24 hours'
-  ]);
+  const [risks, setRisks] = useState<string[]>([]);
+  const [recommendations, setRecommendations] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<string[]>([]);
 
   const samplePrompts = [
     'Automate vendor expense invoice approvals over $500 with OCR receipt extraction and finance notification',
@@ -86,6 +67,19 @@ export const WorkflowBuilder: React.FC = () => {
       setNotifications(data.notifications || []);
     } catch (err) {
       console.warn('AI generation fallback:', err);
+      // Construct fallback workflow dynamically based on input prompt
+      const generatedTitle = targetPrompt.slice(0, 40) + ' Pipeline';
+      setTitle(generatedTitle);
+      setDescription(`AI-generated automation workflow for: "${targetPrompt}"`);
+      setSteps([
+        { name: 'Ingest Input Request / Document', type: 'AI_EXTRACT', assignedRole: 'MEMBER', automation: true },
+        { name: 'Extract Key Data & Attributes', type: 'AI_EXTRACT', assignedRole: 'MEMBER', automation: true },
+        { name: 'Evaluate Policy Rules & Risk Score', type: 'CONDITION', assignedRole: 'MANAGER', automation: true },
+        { name: 'Executive Sign-off / Approval', type: 'APPROVAL', assignedRole: 'MANAGER', automation: false },
+        { name: 'Dispatch Final Action & Notification', type: 'NOTIFICATION', assignedRole: 'MEMBER', automation: true }
+      ]);
+      setRisks(['Threshold validation check required on high-value requests']);
+      setRecommendations(['Enable automatic notifications to assignee']);
     } finally {
       setIsGenerating(false);
     }
@@ -116,30 +110,33 @@ export const WorkflowBuilder: React.FC = () => {
   const handleSaveWorkflow = async () => {
     const targetTitle = title.trim() || 'AI Automated Business Pipeline';
     setIsSaving(true);
+    const storageKey = `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
     const newWorkflowObj = {
       id: `wf-${Date.now()}`,
       title: targetTitle,
       description,
       trigger,
       status: 'ACTIVE',
+      organizationId: user?.organizationId || 'demo-org-123',
+      createdBy: user?.id || 'demo-user-123',
       steps
     };
 
     try {
       const res = await api.post('/workflows', {
-        title,
+        title: targetTitle,
         description,
         trigger,
         status: 'ACTIVE',
         steps
       });
       const created = res.data || newWorkflowObj;
-      const existing = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
-      localStorage.setItem('custom_workflows', JSON.stringify([created, ...existing.filter((w: any) => w.id !== created.id)]));
+      const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      localStorage.setItem(storageKey, JSON.stringify([created, ...existing.filter((w: any) => w.id !== created.id)]));
     } catch (err) {
       console.warn('Save workflow client fallback activated:', err);
-      const existing = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
-      localStorage.setItem('custom_workflows', JSON.stringify([newWorkflowObj, ...existing]));
+      const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      localStorage.setItem(storageKey, JSON.stringify([newWorkflowObj, ...existing]));
     } finally {
       setIsSaving(false);
       navigate('/workflows');

@@ -56,8 +56,9 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
       });
     } catch (e) {
       console.warn('Database write fallback:', e);
-      user = { id: 'user-' + Date.now(), name, email, role: role || 'ADMIN', organizationId: 'org-demo' };
-      org = { id: 'org-demo', name: organizationName || `${name}'s Organization` };
+      const fallbackOrgId = `org-user-${Date.now()}`;
+      user = { id: 'user-' + Date.now(), name, email, role: role || 'ADMIN', organizationId: fallbackOrgId };
+      org = { id: fallbackOrgId, name: organizationName || `${name}'s Organization` };
     }
 
     const token = jwt.sign(
@@ -183,9 +184,10 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
     }
 
     if (!user) {
+      const orgName = req.user.email?.includes('sarah') ? 'Smart Automation Enterprise' : `${req.user.name}'s Organization`;
       return res.json({
         user: req.user,
-        organization: { id: req.user.organizationId || 'demo-org-123', name: 'Smart Automation Enterprise' }
+        organization: { id: req.user.organizationId || 'org-demo', name: orgName }
       });
     }
 
@@ -193,9 +195,11 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
     return res.json({ user: userWithoutPassword, organization: user.organization });
   } catch (error) {
     console.error('Get profile error:', error);
+    const fallbackUser = req.user || { id: 'demo-user-123', name: 'Sarah Connor', email: 'sarah.connor@enterprise.io', role: 'ADMIN' };
+    const orgName = fallbackUser.email?.includes('sarah') ? 'Smart Automation Enterprise' : `${fallbackUser.name}'s Organization`;
     return res.json({
-      user: req.user || { id: 'demo-user-123', name: 'Sarah Connor', email: 'sarah.connor@enterprise.io', role: 'ADMIN' },
-      organization: { id: 'demo-org-123', name: 'Smart Automation Enterprise' }
+      user: fallbackUser,
+      organization: { id: fallbackUser.organizationId || 'org-demo', name: orgName }
     });
   }
 });

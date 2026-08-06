@@ -47,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
         {/* Active Organization Badge for Desktop */}
         <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium">
           <Building className="h-3.5 w-3.5 text-indigo-400" />
-          <span className="truncate max-w-[150px]">{organization?.name || 'Smart Automation Enterprise'}</span>
+          <span className="truncate max-w-[170px]">{organization?.name || (user?.name ? `${user.name}'s Organization` : 'Organization Workspace')}</span>
         </div>
 
         {/* Notifications Dropdown */}
@@ -58,7 +58,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
             title="Notifications"
           >
             <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            {user?.id === 'demo-user-123' && (
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            )}
           </button>
 
           {showNotifications && (
@@ -67,17 +69,27 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                 <span className="text-xs font-bold text-white flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5 text-indigo-400" /> Notifications
                 </span>
-                <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-semibold">2 New</span>
+                <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-semibold">
+                  {user?.id === 'demo-user-123' ? '2 New' : '0 New'}
+                </span>
               </div>
               <div className="space-y-3 mt-3">
-                <div className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-xs">
-                  <div className="font-semibold text-slate-200">Pending Approval Required</div>
-                  <div className="text-slate-400 text-[11px] mt-0.5">Cloud Infrastructure Invoice #INV-2026-8942 ($4,590.00)</div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-xs">
-                  <div className="font-semibold text-slate-200">Workflow Execution Complete</div>
-                  <div className="text-slate-400 text-[11px] mt-0.5">AI Employee Onboarding finished all 4 steps</div>
-                </div>
+                {user?.id === 'demo-user-123' ? (
+                  <>
+                    <div className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-xs">
+                      <div className="font-semibold text-slate-200">Pending Approval Required</div>
+                      <div className="text-slate-400 text-[11px] mt-0.5">Cloud Infrastructure Invoice #INV-2026-8942 ($4,590.00)</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-xs">
+                      <div className="font-semibold text-slate-200">Workflow Execution Complete</div>
+                      <div className="text-slate-400 text-[11px] mt-0.5">AI Employee Onboarding finished all 4 steps</div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 rounded-lg bg-slate-800/40 text-center text-xs text-slate-400">
+                    No new notifications in queue.
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -93,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
               {user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
             </div>
             <div className="text-left hidden md:block">
-              <div className="text-xs font-semibold text-slate-200">{user?.name || 'Sarah Connor'}</div>
+              <div className="text-xs font-semibold text-slate-200">{user?.name || 'User'}</div>
               <div className="text-[10px] text-indigo-400 font-mono font-medium">{user?.role || 'ADMIN'}</div>
             </div>
             <ChevronDown className="h-3.5 w-3.5 text-slate-400 hidden md:block" />

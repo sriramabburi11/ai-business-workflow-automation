@@ -9,10 +9,21 @@ const prisma = new PrismaClient();
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { status, assignee } = req.query;
+    const orgId = req.user?.organizationId;
+    const userId = req.user?.id;
+
+    if (!orgId && !userId) {
+      return res.json([]);
+    }
 
     const whereClause: any = {};
     if (status) whereClause.status = String(status);
     if (assignee) whereClause.assignee = String(assignee);
+    if (orgId) {
+      whereClause.workflow = { organizationId: orgId };
+    } else {
+      whereClause.workflow = { createdBy: userId };
+    }
 
     const tasks = await prisma.task.findMany({
       where: whereClause,
@@ -49,7 +60,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
     await prisma.auditLog.create({
       data: {
         action: 'TASK_UPDATED',
-        userId: req.user?.id || 'demo-user-123',
+        userId: req.user?.id || 'unknown-user',
         details: JSON.stringify({ taskId, status: updatedTask.status, assignee: updatedTask.assignee })
       }
     });

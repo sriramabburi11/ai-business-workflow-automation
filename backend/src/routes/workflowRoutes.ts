@@ -9,22 +9,40 @@ const prisma = new PrismaClient();
 const memoryWorkflows: any[] = [];
 
 // GET /workflows
-router.get('/', authenticateToken, async (_req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
+    const orgId = req.user?.organizationId;
+    const userId = req.user?.id;
+
+    if (!orgId && !userId) {
+      return res.json([]);
+    }
+
+    const whereClause: any = orgId ? { organizationId: orgId } : { createdBy: userId };
+
     const dbWorkflows = await prisma.workflow.findMany({
+      where: whereClause,
       include: {
         steps: { orderBy: { order: 'asc' } },
         _count: { select: { tasks: true, executions: true } }
       },
       orderBy: { createdAt: 'desc' }
     });
-    if (dbWorkflows && dbWorkflows.length > 0) {
-      return res.json([...memoryWorkflows, ...dbWorkflows]);
-    }
+
+    const orgMemoryWorkflows = memoryWorkflows.filter(
+      w => (orgId && w.organizationId === orgId) || (userId && w.createdBy === userId)
+    );
+
+    return res.json([...orgMemoryWorkflows, ...(dbWorkflows || [])]);
   } catch (error) {
     console.error('Error fetching workflows from DB (using memory fallback):', error);
+    const orgId = req.user?.organizationId;
+    const userId = req.user?.id;
+    const orgMemoryWorkflows = memoryWorkflows.filter(
+      w => (orgId && w.organizationId === orgId) || (userId && w.createdBy === userId)
+    );
+    return res.json(orgMemoryWorkflows);
   }
-  return res.json(memoryWorkflows);
 });
 
 // GET /workflows/:id
@@ -101,6 +119,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         description: description || '',
         trigger: trigger || 'MANUAL',
         status: status || 'ACTIVE',
+        organizationId: orgId,
+        createdBy: userId,
         steps: (steps || []).map((s: any, idx: number) => ({
           id: `step-${idx + 1}`,
           name: s.name || `Step ${idx + 1}`,
@@ -124,6 +144,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       description: req.body.description || 'Automated AI workflow process',
       trigger: req.body.trigger || 'MANUAL',
       status: 'ACTIVE',
+      organizationId: req.user?.organizationId || 'demo-org-123',
+      createdBy: req.user?.id || 'demo-user-123',
       steps: req.body.steps || [],
       createdAt: new Date().toISOString()
     };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import {
@@ -18,19 +19,18 @@ import {
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const [analytics, setAnalytics] = useState<any>(null);
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [executingId, setExecutingId] = useState<string | null>(null);
 
+  const getStorageKey = () => `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
+
   const loadData = async () => {
-    const savedCustom: any[] = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
-    const defaultSampleWfs = [
-      { id: 'wf-1', title: 'AI Automated Expense & Vendor Disbursement', status: 'ACTIVE', trigger: 'DOCUMENT_UPLOAD', description: 'Ingests vendor receipts, runs AI OCR extraction, flags compliance anomalies, and routes for manager approval.', steps: [1,2,3,4,5] },
-      { id: 'wf-2', title: 'AI Employee Onboarding & Identity Verification', status: 'ACTIVE', trigger: 'MANUAL', description: 'Automates identity document checks, IT hardware provisioning tasks, e-signatures, and Slack account generation.', steps: [1,2,3,4] },
-      { id: 'wf-3', title: 'Customer Escalation & Contract Renewal AI Review', status: 'ACTIVE', trigger: 'SCHEDULE', description: 'Evaluates high-tier enterprise SLAs, analyzes legal contract terms with Gemini AI, and escalates at-risk customer accounts.', steps: [1,2,3] }
-    ];
+    const storageKey = getStorageKey();
+    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
     try {
       const [analyticsRes, workflowsRes, approvalsRes] = await Promise.all([
@@ -39,21 +39,17 @@ export const Dashboard: React.FC = () => {
         api.get('/approvals?status=PENDING')
       ]);
       setAnalytics(analyticsRes.data);
-      const combined = [...savedCustom, ...(workflowsRes.data || defaultSampleWfs)];
+      const combined = [...savedCustom, ...(workflowsRes.data || [])];
       const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
       setWorkflows(unique);
-      setApprovals(approvalsRes.data);
+      setApprovals(approvalsRes.data || []);
     } catch (err) {
-      console.warn('Dashboard API fallback activated:', err);
-      const combined = [...savedCustom, ...defaultSampleWfs];
-      const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+      console.warn('Dashboard API fetch notice:', err);
       setAnalytics({
-        metrics: { totalWorkflows: unique.length, activeWorkflows: unique.length, pendingApprovalsCount: 1, aiHoursSaved: 54 + (savedCustom.length * 5), approvalRate: 94 }
+        metrics: { totalWorkflows: savedCustom.length, activeWorkflows: savedCustom.length, pendingApprovalsCount: 0, aiHoursSaved: savedCustom.length * 5, approvalRate: 0 }
       });
-      setWorkflows(unique);
-      setApprovals([
-        { id: 'appr-1', task: { title: 'Approve Cloud Infrastructure Invoice #INV-2026-8942' }, approver: 'Alex Rivera (Manager)', aiRiskScore: 18, aiRecommendation: 'APPROVE', comment: 'Awaiting secondary confirmation of bandwidth add-on fees.' }
-      ]);
+      setWorkflows(savedCustom);
+      setApprovals([]);
     } finally {
       setLoading(false);
     }
@@ -61,7 +57,7 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   const handleExecute = async (workflowId: string) => {
     setExecutingId(workflowId);
@@ -85,11 +81,11 @@ export const Dashboard: React.FC = () => {
   }
 
   const metrics = analytics?.metrics || {
-    totalWorkflows: 3,
-    activeWorkflows: 3,
-    pendingApprovalsCount: 1,
-    aiHoursSaved: 54,
-    approvalRate: 94
+    totalWorkflows: workflows.length,
+    activeWorkflows: workflows.length,
+    pendingApprovalsCount: approvals.length,
+    aiHoursSaved: workflows.length * 5,
+    approvalRate: 0
   };
 
   return (
@@ -104,7 +100,7 @@ export const Dashboard: React.FC = () => {
             Enterprise Automation Overview
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Gemini 2.5 Flash is actively monitoring 3 workflows and evaluating approval risks.
+            Gemini 2.5 Flash is actively monitoring {workflows.length} {workflows.length === 1 ? 'workflow' : 'workflows'} and evaluating approval risks.
           </p>
         </div>
 
@@ -216,34 +212,44 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {workflows.map((wf) => (
-              <Card key={wf.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2.5">
-                    <Link to={`/workflows/${wf.id}`} className="font-bold text-sm text-white hover:text-indigo-400 transition-colors">
-                      {wf.title}
-                    </Link>
-                    <Badge variant={wf.status === 'ACTIVE' ? 'active' : 'low'}>{wf.status}</Badge>
+            {workflows.length > 0 ? (
+              workflows.map((wf) => (
+                <Card key={wf.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2.5">
+                      <Link to={`/workflows/${wf.id}`} className="font-bold text-sm text-white hover:text-indigo-400 transition-colors">
+                        {wf.title}
+                      </Link>
+                      <Badge variant={wf.status === 'ACTIVE' ? 'active' : 'low'}>{wf.status}</Badge>
+                    </div>
+                    <p className="text-xs text-slate-400 line-clamp-1">{wf.description}</p>
+                    <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
+                      <span>Trigger: <strong className="text-slate-300">{wf.trigger}</strong></span>
+                      <span>Steps: <strong className="text-slate-300">{wf.steps?.length || 4}</strong></span>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-400 line-clamp-1">{wf.description}</p>
-                  <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
-                    <span>Trigger: <strong className="text-slate-300">{wf.trigger}</strong></span>
-                    <span>Steps: <strong className="text-slate-300">{wf.steps?.length || 4}</strong></span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleExecute(wf.id)}
-                    disabled={executingId === wf.id}
-                    className="px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                    {executingId === wf.id ? 'Running...' : 'Run Pipeline'}
-                  </button>
-                </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleExecute(wf.id)}
+                      disabled={executingId === wf.id}
+                      className="px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      {executingId === wf.id ? 'Running...' : 'Run Pipeline'}
+                    </button>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <Card className="p-8 text-center space-y-3 border-dashed border-slate-800">
+                <GitMerge className="h-8 w-8 text-slate-600 mx-auto" />
+                <p className="text-xs text-slate-300 font-semibold">No active workflows found in your workspace</p>
+                <Link to="/workflows/new" className="inline-block text-xs text-indigo-400 font-bold hover:underline">
+                  Generate your first workflow using AI →
+                </Link>
               </Card>
-            ))}
+            )}
           </div>
         </div>
 
