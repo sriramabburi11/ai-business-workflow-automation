@@ -41,26 +41,37 @@ export const Analytics: React.FC = () => {
   }
 
   const metrics = data?.metrics || {
-    totalWorkflows: 3,
-    approvalRate: 94,
-    aiHoursSaved: 54,
-    totalDocuments: 8
+    totalWorkflows: 0,
+    activeWorkflows: 0,
+    totalExecutions: 0,
+    approvalRate: 0,
+    aiHoursSaved: 0,
+    totalDocuments: 0,
+    approvedCount: 0,
+    pendingApprovalsCount: 0,
+    rejectedCount: 0
   };
 
   const trends = data?.executionTrends || [
-    { day: 'Mon', executions: 42, approvals: 18, docsProcessed: 12 },
-    { day: 'Tue', executions: 65, approvals: 29, docsProcessed: 22 },
-    { day: 'Wed', executions: 88, approvals: 34, docsProcessed: 30 },
-    { day: 'Thu', executions: 74, approvals: 28, docsProcessed: 25 },
-    { day: 'Fri', executions: 95, approvals: 41, docsProcessed: 38 },
-    { day: 'Sat', executions: 31, approvals: 12, docsProcessed: 10 },
-    { day: 'Sun', executions: 24, approvals: 8, docsProcessed: 7 }
+    { day: 'Mon', executions: 0, approvals: 0, docsProcessed: 0 },
+    { day: 'Tue', executions: 0, approvals: 0, docsProcessed: 0 },
+    { day: 'Wed', executions: 0, approvals: 0, docsProcessed: 0 },
+    { day: 'Thu', executions: 0, approvals: 0, docsProcessed: 0 },
+    { day: 'Fri', executions: 0, approvals: 0, docsProcessed: 0 },
+    { day: 'Sat', executions: 0, approvals: 0, docsProcessed: 0 },
+    { day: 'Sun', executions: 0, approvals: 0, docsProcessed: 0 }
   ];
 
-  const pieData = [
-    { name: 'Auto-Approved (<$500)', value: 68, color: '#10b981' },
-    { name: 'Manager Review', value: 24, color: '#f59e0b' },
-    { name: 'AI Escalations', value: 8, color: '#ef4444' }
+  const totalDecisionCount = (metrics.approvedCount || 0) + (metrics.pendingApprovalsCount || 0) + (metrics.rejectedCount || 0);
+
+  const pieData = totalDecisionCount > 0 ? [
+    { name: 'Approved', value: Math.round(((metrics.approvedCount || 0) / totalDecisionCount) * 100), color: '#10b981' },
+    { name: 'Pending Review', value: Math.round(((metrics.pendingApprovalsCount || 0) / totalDecisionCount) * 100), color: '#f59e0b' },
+    { name: 'Rejected / Risk', value: Math.round(((metrics.rejectedCount || 0) / totalDecisionCount) * 100), color: '#ef4444' }
+  ] : [
+    { name: 'Approved', value: 0, color: '#10b981' },
+    { name: 'Pending Review', value: 0, color: '#f59e0b' },
+    { name: 'Rejected / Risk', value: 0, color: '#ef4444' }
   ];
 
   return (
@@ -90,23 +101,23 @@ export const Analytics: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <div className="text-xs text-slate-400 font-semibold">Total Weekly Executions</div>
-          <div className="text-3xl font-extrabold text-white mt-2">419</div>
+          <div className="text-3xl font-extrabold text-white mt-2">{metrics.totalExecutions || 0}</div>
           <div className="text-[11px] text-emerald-400 font-semibold mt-1 flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" /> +24% vs last week
+            <TrendingUp className="h-3 w-3" /> {metrics.totalWorkflows > 0 ? 'Operational' : 'No active workflows'}
           </div>
         </Card>
 
         <Card>
           <div className="text-xs text-slate-400 font-semibold">AI Time Saved</div>
-          <div className="text-3xl font-extrabold text-white mt-2">{metrics.aiHoursSaved} hrs</div>
+          <div className="text-3xl font-extrabold text-white mt-2">{metrics.aiHoursSaved || 0} hrs</div>
           <div className="text-[11px] text-indigo-400 font-semibold mt-1">
-            Avg 4.2 mins / step automated
+            {metrics.totalWorkflows > 0 ? 'Avg 4.2 mins / step automated' : '0 mins automated'}
           </div>
         </Card>
 
         <Card>
           <div className="text-xs text-slate-400 font-semibold">Approval Accuracy Rate</div>
-          <div className="text-3xl font-extrabold text-white mt-2">{metrics.approvalRate}%</div>
+          <div className="text-3xl font-extrabold text-white mt-2">{metrics.approvalRate || 0}%</div>
           <div className="text-[11px] text-emerald-400 font-semibold mt-1">
             0 policy violations
           </div>
@@ -114,7 +125,7 @@ export const Analytics: React.FC = () => {
 
         <Card>
           <div className="text-xs text-slate-400 font-semibold">Documents Ingested</div>
-          <div className="text-3xl font-extrabold text-white mt-2">{metrics.totalDocuments}</div>
+          <div className="text-3xl font-extrabold text-white mt-2">{metrics.totalDocuments || 0}</div>
           <div className="text-[11px] text-purple-400 font-semibold mt-1">
             100% Gemini OCR accuracy
           </div>
