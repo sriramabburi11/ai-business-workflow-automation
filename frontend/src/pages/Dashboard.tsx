@@ -29,26 +29,27 @@ export const Dashboard: React.FC = () => {
   const [executingId, setExecutingId] = useState<string | null>(null);
 
   const loadData = async () => {
-    const savedCustom: any[] = getTenantStorageData('custom_workflows', user);
+    const savedWorkflows: any[] = getTenantStorageData('custom_workflows', user);
+    const savedApprovals: any[] = getTenantStorageData('custom_approvals', user);
 
     try {
       const [analyticsRes, workflowsRes, approvalsRes] = await Promise.all([
         api.get('/analytics'),
         api.get('/workflows'),
-        api.get('/approvals?status=PENDING')
+        api.get('/approvals')
       ]);
       setAnalytics(analyticsRes.data);
-      const combined = [...savedCustom, ...(workflowsRes.data || [])];
-      const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-      setWorkflows(unique);
-      setApprovals(approvalsRes.data || []);
+      const combinedWf = [...savedWorkflows, ...(workflowsRes.data || [])];
+      const uniqueWf = Array.from(new Map(combinedWf.map(item => [item.id, item])).values());
+      setWorkflows(uniqueWf);
+
+      const combinedAppr = [...savedApprovals, ...(approvalsRes.data || [])];
+      const uniqueAppr = Array.from(new Map(combinedAppr.map(item => [item.id, item])).values());
+      setApprovals(uniqueAppr);
     } catch (err) {
       console.warn('Dashboard API fetch notice:', err);
-      setAnalytics({
-        metrics: { totalWorkflows: savedCustom.length, activeWorkflows: savedCustom.length, pendingApprovalsCount: 0, aiHoursSaved: savedCustom.length * 5, approvalRate: savedCustom.length > 0 ? 98 : 0 }
-      });
-      setWorkflows(savedCustom);
-      setApprovals([]);
+      setWorkflows(savedWorkflows);
+      setApprovals(savedApprovals);
     } finally {
       setLoading(false);
     }
@@ -79,12 +80,23 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  const metrics = analytics?.metrics || {
+  const pendingList = approvals.filter(a => a.decision === 'PENDING');
+  const approvedList = approvals.filter(a => a.decision === 'APPROVED');
+  const rejectedList = approvals.filter(a => a.decision === 'REJECTED');
+  const decidedCount = approvedList.length + rejectedList.length;
+
+  const calculatedAccuracyScore = decidedCount > 0
+    ? Math.round((approvedList.length / decidedCount) * 100)
+    : (workflows.length > 0 ? 98 : 0);
+
+  const metrics = {
     totalWorkflows: workflows.length,
-    activeWorkflows: workflows.length,
-    pendingApprovalsCount: approvals.length,
+    activeWorkflows: workflows.filter(w => w.status === 'ACTIVE').length || workflows.length,
+    pendingApprovalsCount: pendingList.length,
     aiHoursSaved: workflows.length * 5,
-    approvalRate: workflows.length > 0 ? 98 : 0
+    approvalRate: analytics?.metrics?.approvalRate !== undefined && analytics.metrics.approvalRate > 0
+      ? analytics.metrics.approvalRate
+      : calculatedAccuracyScore
   };
 
   return (
@@ -264,20 +276,20 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {approvals.length > 0 ? (
-              approvals.map((appr) => (
+            {pendingList.length > 0 ? (
+              pendingList.map((appr) => (
                 <Card key={appr.id} className="p-4 space-y-3 border-l-2 border-l-amber-500">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white">{appr.task?.title || 'Approval Task'}</span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    <span className="text-xs font-bold text-white">{appr.task?.title || 'Approval Sign-off Task'}</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold">
                       Risk: {appr.aiRiskScore || 18}/100
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 line-clamp-2">{appr.comment || 'Awaiting decision.'}</p>
+                  <p className="text-xs text-slate-400 line-clamp-2">{appr.comment || 'Awaiting executive decision.'}</p>
                   <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-[11px]">
                     <span className="text-slate-400">Approver: <strong className="text-slate-200">{appr.approver}</strong></span>
-                    <Link to="/approvals" className="text-indigo-400 font-semibold hover:underline">
-                      Evaluate →
+                    <Link to="/approvals" className="text-indigo-400 font-bold hover:underline">
+                      Review Request →
                     </Link>
                   </div>
                 </Card>
