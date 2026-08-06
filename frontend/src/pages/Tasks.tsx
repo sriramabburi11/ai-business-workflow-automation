@@ -4,18 +4,33 @@ import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import { CheckSquare, Filter, CheckCircle2 } from 'lucide-react';
 
+import { useAuth } from '../context/AuthContext';
+import { Plus } from 'lucide-react';
+
 export const Tasks: React.FC = () => {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const getStorageKey = () => `custom_tasks_${user?.organizationId || user?.id || 'demo'}`;
 
   const loadTasks = async () => {
+    const storageKey = getStorageKey();
+    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
     try {
       const res = await api.get('/tasks');
-      setTasks(res.data || []);
+      if (res.data && Array.isArray(res.data)) {
+        const combined = [...savedCustom, ...res.data];
+        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        setTasks(unique);
+      } else {
+        setTasks(savedCustom);
+      }
     } catch (err) {
       console.warn('Tasks API notice:', err);
-      setTasks([]);
+      setTasks(savedCustom);
     } finally {
       setLoading(false);
     }
@@ -23,14 +38,64 @@ export const Tasks: React.FC = () => {
 
   useEffect(() => {
     loadTasks();
-  }, []);
+  }, [user]);
+
+  const saveToLocalCache = (task: any) => {
+    const storageKey = getStorageKey();
+    const existing: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const updated = [task, ...existing.filter((t: any) => t.id !== task.id)];
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+    setTasks(updated);
+  };
+
+  const handleCreateTask = async () => {
+    setIsCreating(true);
+    const titles = [
+      'Extract Invoice OCR Line Items & Verify Tax Details',
+      'Execute Vendor Security Compliance & SOC2 Check',
+      'Provision Google Workspace & Slack Employee Accounts',
+      'Fulfill IT Hardware Equipment Shipment Request',
+      'Verify Contract SLAs & Renewal Cancellation Terms'
+    ];
+    const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+
+    const tempTask = {
+      id: `task-${Date.now()}`,
+      title: randomTitle,
+      description: 'Automated workflow action task assigned to engineering & operations team.',
+      status: 'PENDING',
+      priority: 'HIGH',
+      assignee: 'MEMBER',
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const res = await api.post('/tasks', {
+        title: randomTitle,
+        description: 'Automated workflow action task assigned to engineering & operations team.',
+        assignee: 'MEMBER',
+        priority: 'HIGH'
+      });
+      const created = res.data || tempTask;
+      saveToLocalCache(created);
+    } catch (err) {
+      saveToLocalCache(tempTask);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleUpdateStatus = async (taskId: string, newStatus: string) => {
+    const target = tasks.find(t => t.id === taskId);
+    if (target) {
+      const updated = { ...target, status: newStatus };
+      saveToLocalCache(updated);
+    }
+
     try {
       await api.put(`/tasks/${taskId}`, { status: newStatus });
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     } catch (err) {
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+      console.warn('Task status update notice:', err);
     }
   };
 
@@ -46,19 +111,29 @@ export const Tasks: React.FC = () => {
           <p className="text-xs text-slate-400 mt-1">Track active workflow tasks, assignments, and resolution statuses</p>
         </div>
 
-        {/* Filter controls */}
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500"
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleCreateTask}
+            disabled={isCreating}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold text-xs shadow flex items-center gap-1.5 transition-all hover:scale-105"
           >
-            <option value="ALL">All Statuses</option>
-            <option value="PENDING">Pending Tasks</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="COMPLETED">Completed</option>
-          </select>
+            <Plus className="h-4 w-4" /> {isCreating ? 'Creating Task...' : 'Create Action Task'}
+          </button>
+
+          {/* Filter controls */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending Tasks</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+          </div>
         </div>
       </div>
 
