@@ -22,7 +22,18 @@ export const WorkflowDetail: React.FC = () => {
     try {
       const res = await api.get(`/workflows/${id}`);
       if (res.data) {
-        setWorkflow(res.data);
+        const mergedExecutions = [
+          ...(localMatch?.executions || []),
+          ...(res.data.executions || [])
+        ];
+        const uniqueExecutions = Array.from(
+          new Map(mergedExecutions.map((e: any) => [e.id, e])).values()
+        );
+        setWorkflow({
+          ...res.data,
+          executions: uniqueExecutions
+        });
+        setLoading(false);
         return;
       }
     } catch (err) {
@@ -39,28 +50,34 @@ export const WorkflowDetail: React.FC = () => {
 
   useEffect(() => {
     if (id) loadWorkflow();
-  }, [id, user]);
+  }, [id]);
 
   const handleRunPipeline = async () => {
     if (!id) return;
     setExecuting(true);
     try {
       const res = await api.post(`/workflows/${id}/execute`);
+      const rawLogs = res.data?.logs || [
+        { timestamp: new Date().toISOString(), message: `Workflow execution pipeline started: "${workflow?.title || 'Pipeline'}"` },
+        { timestamp: new Date().toISOString(), message: `Workflow steps finished processing successfully.` }
+      ];
+
+      const execId = res.data?.executionId || `exec-${Date.now()}`;
       const newExec = {
-        id: res.data?.executionId || `exec-${Date.now()}`,
+        id: execId,
         status: res.data?.status || 'COMPLETED',
-        logs: res.data?.logs || [
-          { timestamp: new Date().toISOString(), message: `Pipeline execution completed successfully.` }
-        ],
+        logs: rawLogs,
         completedAt: new Date().toISOString()
       };
 
       setWorkflow((prev: any) => {
         if (!prev) return prev;
-        const existingExecs = prev.executions || [];
+        const currentExecs = prev.executions || [];
+        const combined = [newExec, ...currentExecs];
+        const unique = Array.from(new Map(combined.map((e: any) => [e.id, e])).values());
         return {
           ...prev,
-          executions: [newExec, ...existingExecs]
+          executions: unique
         };
       });
 
@@ -72,10 +89,13 @@ export const WorkflowDetail: React.FC = () => {
         if (w.id === id) {
           found = true;
           const existing = w.executions || [];
-          return { ...w, executions: [newExec, ...existing] };
+          const combined = [newExec, ...existing];
+          const unique = Array.from(new Map(combined.map((e: any) => [e.id, e])).values());
+          return { ...w, executions: unique };
         }
         return w;
       });
+
       if (!found && workflow) {
         updatedCustom.unshift({
           ...workflow,
@@ -164,29 +184,39 @@ export const WorkflowDetail: React.FC = () => {
 
         {workflow.executions && workflow.executions.length > 0 ? (
           <div className="space-y-4">
-            {workflow.executions.map((exec: any) => {
-              let logs: any[] = [];
-              try {
-                logs = typeof exec.logs === 'string' ? JSON.parse(exec.logs) : exec.logs;
-              } catch (e) {
-                logs = Array.isArray(exec.logs) ? exec.logs : [];
+            {workflow.executions.map((exec: any, idx: number) => {
+              let logsList: any[] = [];
+              if (Array.isArray(exec.logs)) {
+                logsList = exec.logs;
+              } else if (typeof exec.logs === 'string') {
+                try {
+                  logsList = JSON.parse(exec.logs);
+                } catch (e) {
+                  logsList = [{ timestamp: new Date().toISOString(), message: exec.logs }];
+                }
               }
 
               return (
-                <div key={exec.id} className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+                <div key={exec.id || idx} className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-indigo-300 font-mono">Execution #{exec.id?.slice(0, 12)}</span>
+                    <span className="font-bold text-indigo-300 font-mono">Execution #{String(exec.id || 'exec-run').slice(0, 16)}</span>
                     <Badge variant="completed">{exec.status || 'COMPLETED'}</Badge>
                   </div>
                   <div className="bg-black/50 p-3 rounded-lg font-mono text-[11px] text-slate-300 space-y-1">
-                    {Array.isArray(logs) && logs.map((log: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-slate-400 text-[10px]">
-                          {typeof log === 'object' && log?.timestamp ? log.timestamp.slice(11, 19) : new Date().toLocaleTimeString()}
-                        </span>
-                        <span>{typeof log === 'object' && log?.message ? log.message : String(log)}</span>
-                      </div>
-                    ))}
+                    {Array.isArray(logsList) && logsList.length > 0 ? (
+                      logsList.map((log: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-slate-400 text-[10px]">
+                            {typeof log === 'object' && log?.timestamp
+                              ? String(log.timestamp).slice(11, 19)
+                              : new Date().toLocaleTimeString()}
+                          </span>
+                          <span>{typeof log === 'object' && log?.message ? log.message : String(log)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-slate-400 text-[10px]">Pipeline steps completed successfully.</div>
+                    )}
                   </div>
                 </div>
               );
