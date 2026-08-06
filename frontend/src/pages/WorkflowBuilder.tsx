@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { saveTenantStorageData } from '../utils/storage';
 import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import {
@@ -143,12 +144,10 @@ export const WorkflowBuilder: React.FC = () => {
       });
       const created = res.data || newWorkflowObj;
       targetId = created.id || tempWfId;
-      const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      localStorage.setItem(storageKey, JSON.stringify([created, ...existing.filter((w: any) => w.id !== created.id)]));
+      saveTenantStorageData('custom_workflows', user, created);
     } catch (err) {
-      console.warn('Save workflow client fallback activated:', err);
-      const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      localStorage.setItem(storageKey, JSON.stringify([newWorkflowObj, ...existing]));
+      console.warn('Save workflow client fallback notice:', err);
+      saveTenantStorageData('custom_workflows', user, newWorkflowObj);
     } finally {
       setIsSaving(false);
       navigate(`/workflows/${targetId}`);

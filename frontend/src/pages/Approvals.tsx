@@ -8,6 +8,8 @@ import { ShieldCheck, Sparkles, CheckCircle2, XCircle, AlertTriangle, FileText, 
 import { useAuth } from '../context/AuthContext';
 import { Plus } from 'lucide-react';
 
+import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+
 export const Approvals: React.FC = () => {
   const { user } = useAuth();
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -17,11 +19,8 @@ export const Approvals: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const getStorageKey = () => `custom_approvals_${user?.organizationId || user?.id || 'demo'}`;
-
   const loadApprovals = async () => {
-    const storageKey = getStorageKey();
-    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const savedCustom: any[] = getTenantStorageData('custom_approvals', user);
     try {
       const res = await api.get('/approvals');
       if (res.data && Array.isArray(res.data)) {
@@ -44,10 +43,8 @@ export const Approvals: React.FC = () => {
   }, [user]);
 
   const saveToLocalCache = (item: any) => {
-    const storageKey = getStorageKey();
-    const existing: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const updated = [item, ...existing.filter((a: any) => a.id !== item.id)];
-    localStorage.setItem(storageKey, JSON.stringify(updated));
+    saveTenantStorageData('custom_approvals', user, item);
+    const updated = getTenantStorageData('custom_approvals', user);
     setApprovals(updated);
   };
 

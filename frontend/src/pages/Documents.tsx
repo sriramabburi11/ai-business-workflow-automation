@@ -6,6 +6,8 @@ import { FileText, Upload, Sparkles, AlertTriangle, CheckCircle2, Eye, Code } fr
 
 import { useAuth } from '../context/AuthContext';
 
+import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+
 export const Documents: React.FC = () => {
   const { user } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
@@ -14,11 +16,8 @@ export const Documents: React.FC = () => {
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [showJsonView, setShowJsonView] = useState(false);
 
-  const getStorageKey = () => `custom_documents_${user?.organizationId || user?.id || 'demo'}`;
-
   const loadDocuments = async () => {
-    const storageKey = getStorageKey();
-    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const savedCustom: any[] = getTenantStorageData('custom_documents', user);
     try {
       const res = await api.get('/documents');
       if (res.data && Array.isArray(res.data)) {
@@ -44,10 +43,8 @@ export const Documents: React.FC = () => {
   }, [user]);
 
   const saveToLocalCache = (doc: any) => {
-    const storageKey = getStorageKey();
-    const existing: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const updated = [doc, ...existing.filter((d: any) => d.id !== doc.id)];
-    localStorage.setItem(storageKey, JSON.stringify(updated));
+    saveTenantStorageData('custom_documents', user, doc);
+    const updated = getTenantStorageData('custom_documents', user);
     setDocuments(updated);
     setSelectedDoc(doc);
   };

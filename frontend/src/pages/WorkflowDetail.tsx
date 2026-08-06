@@ -7,6 +7,8 @@ import { GitMerge, Play, ArrowLeft, Clock, CheckCircle2, FileText, ShieldCheck }
 
 import { useAuth } from '../context/AuthContext';
 
+import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+
 export const WorkflowDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -15,8 +17,7 @@ export const WorkflowDetail: React.FC = () => {
   const [executing, setExecuting] = useState(false);
 
   const loadWorkflow = async () => {
-    const storageKey = `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
-    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const savedCustom: any[] = getTenantStorageData('custom_workflows', user);
     const localMatch = savedCustom.find((w: any) => w.id === id);
 
     try {

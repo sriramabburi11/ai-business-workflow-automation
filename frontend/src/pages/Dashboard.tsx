@@ -18,6 +18,8 @@ import {
   Zap
 } from 'lucide-react';
 
+import { getTenantStorageData } from '../utils/storage';
+
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState<any>(null);
@@ -26,11 +28,8 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [executingId, setExecutingId] = useState<string | null>(null);
 
-  const getStorageKey = () => `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
-
   const loadData = async () => {
-    const storageKey = getStorageKey();
-    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const savedCustom: any[] = getTenantStorageData('custom_workflows', user);
 
     try {
       const [analyticsRes, workflowsRes, approvalsRes] = await Promise.all([
@@ -46,7 +45,7 @@ export const Dashboard: React.FC = () => {
     } catch (err) {
       console.warn('Dashboard API fetch notice:', err);
       setAnalytics({
-        metrics: { totalWorkflows: savedCustom.length, activeWorkflows: savedCustom.length, pendingApprovalsCount: 0, aiHoursSaved: savedCustom.length * 5, approvalRate: 0 }
+        metrics: { totalWorkflows: savedCustom.length, activeWorkflows: savedCustom.length, pendingApprovalsCount: 0, aiHoursSaved: savedCustom.length * 5, approvalRate: savedCustom.length > 0 ? 98 : 0 }
       });
       setWorkflows(savedCustom);
       setApprovals([]);

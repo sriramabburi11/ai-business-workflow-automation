@@ -7,6 +7,8 @@ import { CheckSquare, Filter, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Plus } from 'lucide-react';
 
+import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+
 export const Tasks: React.FC = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<any[]>([]);
@@ -14,11 +16,8 @@ export const Tasks: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isCreating, setIsCreating] = useState(false);
 
-  const getStorageKey = () => `custom_tasks_${user?.organizationId || user?.id || 'demo'}`;
-
   const loadTasks = async () => {
-    const storageKey = getStorageKey();
-    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const savedCustom: any[] = getTenantStorageData('custom_tasks', user);
     try {
       const res = await api.get('/tasks');
       if (res.data && Array.isArray(res.data)) {
@@ -41,10 +40,8 @@ export const Tasks: React.FC = () => {
   }, [user]);
 
   const saveToLocalCache = (task: any) => {
-    const storageKey = getStorageKey();
-    const existing: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const updated = [task, ...existing.filter((t: any) => t.id !== task.id)];
-    localStorage.setItem(storageKey, JSON.stringify(updated));
+    saveTenantStorageData('custom_tasks', user, task);
+    const updated = getTenantStorageData('custom_tasks', user);
     setTasks(updated);
   };
 

@@ -6,6 +6,8 @@ import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import { GitMerge, Sparkles, Play, Trash2, Edit3, Search, Filter, CheckCircle2 } from 'lucide-react';
 
+import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+
 export const Workflows: React.FC = () => {
   const { user } = useAuth();
   const [workflows, setWorkflows] = useState<any[]>([]);
@@ -42,11 +44,8 @@ export const Workflows: React.FC = () => {
     return rawText;
   };
 
-  const getStorageKey = () => `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
-
   const loadWorkflows = async () => {
-    const storageKey = getStorageKey();
-    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const savedCustom: any[] = getTenantStorageData('custom_workflows', user);
     try {
       const res = await api.get('/workflows');
       if (res.data && Array.isArray(res.data)) {
@@ -75,10 +74,13 @@ export const Workflows: React.FC = () => {
       } catch (err) {
         console.warn('Delete workflow API fallback');
       } finally {
-        const storageKey = getStorageKey();
-        const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const savedCustom = getTenantStorageData('custom_workflows', user);
         const updatedCustom = savedCustom.filter(w => w.id !== id);
-        localStorage.setItem(storageKey, JSON.stringify(updatedCustom));
+        const cleanEmail = (user?.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
+        localStorage.setItem(`custom_workflows_${cleanEmail}`, JSON.stringify(updatedCustom));
+        if (user?.organizationId) {
+          localStorage.setItem(`custom_workflows_${user.organizationId}`, JSON.stringify(updatedCustom));
+        }
         setWorkflows(prev => prev.filter(w => w.id !== id));
       }
     }
@@ -101,20 +103,19 @@ export const Workflows: React.FC = () => {
         completedAt: new Date().toISOString()
       };
 
-      const storageKey = getStorageKey();
-      const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      const updatedCustom = savedCustom.map((w: any) => {
-        if (w.id === id) {
-          const existing = w.executions || [];
-          return { ...w, executions: [newExec, ...existing] };
-        }
-        return w;
-      });
-      localStorage.setItem(storageKey, JSON.stringify(updatedCustom));
+      const savedCustom = getTenantStorageData('custom_workflows', user);
+      const targetWf = savedCustom.find((w: any) => w.id === id);
+      if (targetWf) {
+        const updatedWf = {
+          ...targetWf,
+          executions: [newExec, ...(targetWf.executions || [])]
+        };
+        saveTenantStorageData('custom_workflows', user, updatedWf);
+      }
 
       await loadWorkflows();
     } catch (err) {
-      console.warn(`Workflow pipeline execution triggered: ${id}`);
+      console.warn('Workflow execution notice:', err);
       setSuccessMsg('Pipeline execution completed successfully.');
       setTimeout(() => setSuccessMsg(null), 4000);
     } finally {
