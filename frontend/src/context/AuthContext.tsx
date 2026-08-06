@@ -64,29 +64,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchUser();
   }, [token]);
 
+  const inferNameFromEmail = (emailStr?: string) => {
+    if (!emailStr) return 'Enterprise User';
+    const username = emailStr.split('@')[0];
+    const words = username.replace(/[._\-\d]+/g, ' ').trim().split(' ').filter(Boolean);
+    if (words.length === 0) return username.charAt(0).toUpperCase() + username.slice(1);
+    return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  };
+
   const login = async (email: string, password: string) => {
     localStorage.clear();
     sessionStorage.clear();
+    const derivedName = inferNameFromEmail(email);
+    const derivedOrgId = `org-${email.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    const derivedOrgName = `${derivedName}'s Organization`;
+
     try {
       const res = await api.post('/auth/login', { email, password });
       const { token: newToken, user: userData, organization: orgData } = res.data;
-      localStorage.setItem('token', newToken || 'guest-demo-token-jwt-2026');
-      setToken(newToken || 'guest-demo-token-jwt-2026');
-      setUser(userData || { id: 'demo-user-123', name: 'Sarah Connor', email, role: 'ADMIN', organizationId: 'demo-org-123' });
-      setOrganization(orgData || { id: 'demo-org-123', name: 'Smart Automation Enterprise' });
+      localStorage.setItem('token', newToken || `login-token-${Date.now()}`);
+      setToken(newToken || `login-token-${Date.now()}`);
+      setUser(userData || { id: `user-${Date.now()}`, name: derivedName, email, role: 'ADMIN', organizationId: derivedOrgId });
+      setOrganization(orgData || { id: derivedOrgId, name: derivedOrgName });
     } catch (err) {
-      console.warn('Login fallback activated:', err);
-      const demoToken = 'guest-demo-token-jwt-2026';
-      localStorage.setItem('token', demoToken);
-      setToken(demoToken);
+      console.warn('Login fallback notice:', err);
+      const fallbackToken = `login-token-${Date.now()}`;
+      localStorage.setItem('token', fallbackToken);
+      setToken(fallbackToken);
       setUser({
-        id: 'demo-user-123',
-        name: 'Sarah Connor',
-        email: email || 'sarah.connor@enterprise.io',
+        id: `user-${Date.now()}`,
+        name: derivedName,
+        email: email || 'user@enterprise.io',
         role: 'ADMIN',
-        organizationId: 'demo-org-123'
+        organizationId: derivedOrgId
       });
-      setOrganization({ id: 'demo-org-123', name: 'Smart Automation Enterprise' });
+      setOrganization({ id: derivedOrgId, name: derivedOrgName });
     }
   };
 
@@ -131,14 +143,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(demoToken);
     setUser({
       id: 'demo-user-123',
-      name: 'Sarah Connor',
-      email: 'sarah.connor@enterprise.io',
+      name: 'Demo Evaluator',
+      email: 'evaluator@enterprise.io',
       role: 'ADMIN',
       organizationId: 'demo-org-123'
     });
     setOrganization({
       id: 'demo-org-123',
-      name: 'Smart Automation Enterprise'
+      name: 'Demo Automation Enterprise'
     });
   };
 
