@@ -18,6 +18,15 @@ export const Approvals: React.FC = () => {
   const [decisionComment, setDecisionComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Manual Approval Form Inputs
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newApprover, setNewApprover] = useState('MANAGER');
+  const [newRiskScore, setNewRiskScore] = useState<number>(15);
+  const [newRecommendation, setNewRecommendation] = useState('APPROVE');
+  const [newPipelineName, setNewPipelineName] = useState('Enterprise AI Workflow Pipeline');
 
   const loadApprovals = async () => {
     const savedCustom: any[] = getTenantStorageData('custom_approvals', user);
@@ -48,51 +57,49 @@ export const Approvals: React.FC = () => {
     setApprovals(updated);
   };
 
-  const handleCreateApproval = async () => {
+  const handleManualCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
     setIsCreating(true);
-    const titles = [
-      'Enterprise Software License Purchase Approval ($4,500.00)',
-      'Vendor Expense Invoice Payout Review ($12,800.00)',
-      'SLA Contract Exception & Risk Override Request',
-      'New Employee System Access & IT Credentials Provisioning',
-      'DevOps Production CI/CD Gate Deployment Approval'
-    ];
-    const randomTitle = titles[Math.floor(Math.random() * titles.length)];
-    const riskScore = Math.floor(Math.random() * 25) + 8;
 
-    const tempAppr = {
+    const customAppr = {
       id: `appr-${Date.now()}`,
       taskId: `task-${Date.now()}`,
-      approver: 'MANAGER',
+      approver: newApprover,
       decision: 'PENDING',
       comment: 'Gemini AI risk score evaluated. Zero policy breach detected.',
-      aiRiskScore: riskScore,
-      aiRecommendation: 'APPROVE',
+      aiRiskScore: newRiskScore,
+      aiRecommendation: newRecommendation,
+      workflowTitle: newPipelineName,
       createdAt: new Date().toISOString(),
       task: {
         id: `task-${Date.now()}`,
-        title: randomTitle,
-        description: 'Automated executive approval request generated for business operations sign-off.',
+        title: newTitle,
+        description: newDescription || 'Manual executive approval request created for business operations sign-off.',
         status: 'PENDING',
-        assignee: 'MANAGER',
-        priority: 'HIGH'
+        assignee: newApprover,
+        priority: 'HIGH',
+        workflow: { title: newPipelineName }
       }
     };
 
     try {
       const res = await api.post('/approvals/create', {
-        title: randomTitle,
-        description: 'Automated executive approval request generated for business operations sign-off.',
-        approver: 'MANAGER',
-        aiRiskScore: riskScore,
-        aiRecommendation: 'APPROVE'
+        title: newTitle,
+        description: newDescription || 'Manual executive approval request created for business operations sign-off.',
+        approver: newApprover,
+        aiRiskScore: newRiskScore,
+        aiRecommendation: newRecommendation
       });
-      const created = res.data || tempAppr;
-      saveToLocalCache(created);
+      const created = res.data || customAppr;
+      saveToLocalCache({ ...created, workflowTitle: newPipelineName });
     } catch (err) {
-      saveToLocalCache(tempAppr);
+      saveToLocalCache(customAppr);
     } finally {
       setIsCreating(false);
+      setIsCreateModalOpen(false);
+      setNewTitle('');
+      setNewDescription('');
     }
   };
 
@@ -139,11 +146,10 @@ export const Approvals: React.FC = () => {
         </div>
 
         <button
-          onClick={handleCreateApproval}
-          disabled={isCreating}
+          onClick={() => setIsCreateModalOpen(true)}
           className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all hover:scale-105"
         >
-          <Plus className="h-4 w-4" /> {isCreating ? 'Generating Request...' : 'Generate Approval Request'}
+          <Plus className="h-4 w-4" /> Create Manual Approval Request
         </button>
       </div>
 
@@ -209,6 +215,110 @@ export const Approvals: React.FC = () => {
           No approval items found in queue!
         </Card>
       )}
+
+      {/* Create Manual Approval Modal */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Create Custom Manual Approval Request"
+      >
+        <form onSubmit={handleManualCreateSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">Approval Request Title *</label>
+            <input
+              type="text"
+              required
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="e.g. Enterprise Software License Purchase Approval ($4,500.00)"
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">Description / Business Context</label>
+            <textarea
+              rows={2}
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="e.g. Vendor expense evaluation complete. routed for executive sign-off."
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Target Workflow Pipeline</label>
+              <input
+                type="text"
+                value={newPipelineName}
+                onChange={(e) => setNewPipelineName(e.target.value)}
+                placeholder="e.g. AI Procurement Pipeline"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Assigned Approver Role</label>
+              <select
+                value={newApprover}
+                onChange={(e) => setNewApprover(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="MANAGER">MANAGER</option>
+                <option value="FINANCE">FINANCE</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="SECURITY">SECURITY</option>
+                <option value="HR">HR</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">AI Risk Score (0 - 100)</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={newRiskScore}
+                onChange={(e) => setNewRiskScore(Number(e.target.value))}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">AI Recommendation</label>
+              <select
+                value={newRecommendation}
+                onChange={(e) => setNewRecommendation(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="APPROVE">APPROVE</option>
+                <option value="REJECT">REJECT</option>
+                <option value="MANUAL_REVIEW">MANUAL_REVIEW</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(false)}
+              className="px-4 py-2 rounded-xl bg-slate-900 text-slate-300 text-xs font-semibold hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isCreating}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold text-xs shadow-lg flex items-center gap-1.5"
+            >
+              <Plus className="h-4 w-4" /> {isCreating ? 'Saving Approval...' : 'Create Approval Request'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Decision Modal */}
       <Modal
