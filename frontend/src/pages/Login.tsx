@@ -6,8 +6,8 @@ import { Zap, Mail, Lock, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react
 export const Login: React.FC = () => {
   const { login, guestLogin } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('sarah.connor@enterprise.io');
-  const [password, setPassword] = useState('Password123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
