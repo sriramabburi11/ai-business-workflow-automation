@@ -3,7 +3,7 @@ import api from '../api/client';
 import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import { Modal } from '../components/UI/Modal';
-import { ShieldCheck, Sparkles, CheckCircle2, XCircle, AlertTriangle, FileText, Bot, GitMerge } from 'lucide-react';
+import { ShieldCheck, Sparkles, CheckCircle2, XCircle, AlertTriangle, FileText, Bot, GitMerge, Trash2 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { Plus } from 'lucide-react';
@@ -28,22 +28,55 @@ export const Approvals: React.FC = () => {
   const [newRecommendation, setNewRecommendation] = useState('APPROVE');
   const [newPipelineName, setNewPipelineName] = useState('Enterprise AI Workflow Pipeline');
 
+  const deduplicateApprovals = (items: any[]) => {
+    const map = new Map<string, any>();
+    items.forEach(item => {
+      const titleKey = (item.task?.title || item.title || '').trim().toLowerCase();
+      const uniqueKey = `${titleKey}_${item.decision}`;
+      if (!map.has(uniqueKey)) {
+        map.set(uniqueKey, item);
+      }
+    });
+    return Array.from(map.values());
+  };
+
   const loadApprovals = async () => {
     const savedCustom: any[] = getTenantStorageData('custom_approvals', user);
     try {
       const res = await api.get('/approvals');
       if (res.data && Array.isArray(res.data)) {
         const combined = [...savedCustom, ...res.data];
-        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        const unique = deduplicateApprovals(combined);
         setApprovals(unique);
       } else {
-        setApprovals(savedCustom);
+        setApprovals(deduplicateApprovals(savedCustom));
       }
     } catch (err) {
       console.warn('Approvals API notice:', err);
-      setApprovals(savedCustom);
+      setApprovals(deduplicateApprovals(savedCustom));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteApproval = (id: string) => {
+    const updated = approvals.filter(a => a.id !== id);
+    setApprovals(updated);
+    const cleanEmail = (user?.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
+    localStorage.setItem(`custom_approvals_${cleanEmail}`, JSON.stringify(updated));
+    if (user?.organizationId) {
+      localStorage.setItem(`custom_approvals_${user.organizationId}`, JSON.stringify(updated));
+    }
+  };
+
+  const handleClearAllApprovals = () => {
+    if (confirm('Clear all items from Approvals Hub?')) {
+      setApprovals([]);
+      const cleanEmail = (user?.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
+      localStorage.removeItem(`custom_approvals_${cleanEmail}`);
+      if (user?.organizationId) {
+        localStorage.removeItem(`custom_approvals_${user.organizationId}`);
+      }
     }
   };
 
@@ -145,12 +178,22 @@ export const Approvals: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all hover:scale-105"
-        >
-          <Plus className="h-4 w-4" /> Create Manual Approval Request
-        </button>
+        <div className="flex items-center gap-3">
+          {approvals.length > 0 && (
+            <button
+              onClick={handleClearAllApprovals}
+              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold text-xs transition-all"
+            >
+              Clear Queue
+            </button>
+          )}
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all hover:scale-105"
+          >
+            <Plus className="h-4 w-4" /> Create Manual Approval Request
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -158,12 +201,21 @@ export const Approvals: React.FC = () => {
       ) : approvals.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {approvals.map((appr) => (
-            <Card key={appr.id} className="p-6 flex flex-col justify-between space-y-4 border-slate-800">
+            <Card key={appr.id} className="p-6 flex flex-col justify-between space-y-4 border-slate-800 relative group">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Badge variant={appr.decision === 'APPROVED' ? 'completed' : appr.decision === 'PENDING' ? 'pending' : 'urgent'}>
-                    {appr.decision}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={appr.decision === 'APPROVED' ? 'completed' : appr.decision === 'PENDING' ? 'pending' : 'urgent'}>
+                      {appr.decision}
+                    </Badge>
+                    <button
+                      onClick={() => handleDeleteApproval(appr.id)}
+                      title="Dismiss/Delete Approval Card"
+                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-mono">
                     <Sparkles className="h-3 w-3 text-purple-400" />
                     <span className="text-slate-400">Risk Score:</span>
