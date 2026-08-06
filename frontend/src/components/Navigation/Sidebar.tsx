@@ -51,14 +51,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar: Fixed to Viewport Window on all screens */}
+      {/* Sidebar: Fixed 256px wide flex column on desktop, off-canvas drawer on mobile */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 h-screen w-64 bg-[#0b0f19] border-r border-slate-800 flex flex-col select-none transition-transform duration-300 ease-in-out lg:z-40 lg:translate-x-0 ${
+        className={`fixed lg:static top-0 bottom-0 left-0 z-50 h-screen w-64 shrink-0 bg-[#0b0f19] border-r border-slate-800 flex flex-col select-none transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
+        <div className="p-5 border-b border-slate-800/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
               <Zap className="h-5 w-5 text-white" />
@@ -127,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Footer / Model indicator */}
-        <div className="p-4 border-t border-slate-800/80 bg-slate-900/40">
+        <div className="p-4 border-t border-slate-800/80 bg-slate-900/40 shrink-0">
           <div className="flex items-center justify-between text-xs text-slate-400">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>

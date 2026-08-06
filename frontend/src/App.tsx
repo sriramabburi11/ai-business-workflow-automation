@@ -26,7 +26,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#080c14] flex items-center justify-center text-slate-400">
+      <div className="h-screen w-screen bg-[#080c14] flex items-center justify-center text-slate-400">
         <div className="h-10 w-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -37,9 +37,12 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   return (
-    <div className="min-h-screen bg-[#080c14] overflow-x-hidden">
+    <div className="h-screen w-screen bg-[#080c14] flex overflow-hidden">
+      {/* Constant fixed-width sidebar column on desktop */}
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
-      <div className="lg:pl-64 flex flex-col min-h-screen min-w-0 transition-all duration-300">
+
+      {/* Main Content Viewport: Scrolls independently while sidebar stays 100% constant */}
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
         <Navbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
