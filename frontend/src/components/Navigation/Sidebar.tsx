@@ -51,9 +51,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar: Fixed on Desktop (lg:sticky lg:top-0 lg:shrink-0), Drawer on Mobile */}
+      {/* Sidebar: Fixed to Viewport Window on all screens */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 h-screen w-64 bg-[#0b0f19] border-r border-slate-800 flex flex-col select-none transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:shrink-0 lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 h-screen w-64 bg-[#0b0f19] border-r border-slate-800 flex flex-col select-none transition-transform duration-300 ease-in-out lg:z-40 lg:translate-x-0 ${
           isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
         }`}
       >

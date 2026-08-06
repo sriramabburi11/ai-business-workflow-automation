@@ -37,9 +37,9 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   return (
-    <div className="flex min-h-screen bg-[#080c14] overflow-x-hidden">
+    <div className="min-h-screen bg-[#080c14] overflow-x-hidden">
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="lg:pl-64 flex flex-col min-h-screen min-w-0 transition-all duration-300">
         <Navbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
