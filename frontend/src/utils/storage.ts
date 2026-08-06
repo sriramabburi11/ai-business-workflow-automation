@@ -1,10 +1,10 @@
 export const getTenantStorageData = (prefix: string, user: any): any[] => {
-  if (!user) return [];
-  const cleanEmail = (user.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!user || !user.email) return [];
+  const cleanEmail = user.email.toLowerCase().replace(/[^a-z0-9]/g, '');
   const primaryKey = `${prefix}_${cleanEmail}`;
   const itemsMap = new Map<string, any>();
 
-  // 1. Read primary deterministic email key
+  // 1. Read primary email-isolated key
   try {
     const raw = localStorage.getItem(primaryKey);
     if (raw) {
@@ -13,59 +13,41 @@ export const getTenantStorageData = (prefix: string, user: any): any[] => {
     }
   } catch (e) {}
 
-  // 2. Read secondary organizationId key if different
-  if (user.organizationId) {
+  // 2. Read secondary organizationId key ONLY if strictly belonging to current user
+  if (user.organizationId && user.organizationId !== 'demo-org-123') {
     try {
       const raw = localStorage.getItem(`${prefix}_${user.organizationId}`);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) parsed.forEach(i => i && i.id && itemsMap.set(i.id, i));
+        if (Array.isArray(parsed)) {
+          parsed.forEach(i => {
+            if (i && i.id) {
+              if (i.createdBy === user.id || i.organizationId === user.organizationId) {
+                if (!itemsMap.has(i.id)) {
+                  itemsMap.set(i.id, i);
+                }
+              }
+            }
+          });
+        }
       }
     } catch (e) {}
   }
 
-  // 3. Scan all keys in localStorage starting with prefix to ensure 0 lost data
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(prefix)) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            parsed.forEach(item => {
-              if (item && item.id) {
-                if (!itemsMap.has(item.id)) {
-                  itemsMap.set(item.id, item);
-                }
-              }
-            });
-          }
-        }
-      }
-    }
-  } catch (e) {}
-
-  const merged = Array.from(itemsMap.values());
-  // Synchronize back to primary key
-  try {
-    localStorage.setItem(primaryKey, JSON.stringify(merged));
-  } catch (e) {}
-
-  return merged;
+  return Array.from(itemsMap.values());
 };
 
 export const saveTenantStorageData = (prefix: string, user: any, item: any) => {
-  if (!user || !item || !item.id) return;
-  const existing = getTenantStorageData(prefix, user);
-  const updated = [item, ...existing.filter((i: any) => i.id !== item.id)];
-  
-  const cleanEmail = (user.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!user || !user.email || !item || !item.id) return;
+  const cleanEmail = user.email.toLowerCase().replace(/[^a-z0-9]/g, '');
   const primaryKey = `${prefix}_${cleanEmail}`;
+
+  const existing = getTenantStorageData(prefix, user);
+  const updated = [{ ...item, createdBy: user.id, organizationId: user.organizationId }, ...existing.filter((i: any) => i.id !== item.id)];
 
   try {
     localStorage.setItem(primaryKey, JSON.stringify(updated));
-    if (user.organizationId) {
+    if (user.organizationId && user.organizationId !== 'demo-org-123') {
       localStorage.setItem(`${prefix}_${user.organizationId}`, JSON.stringify(updated));
     }
   } catch (e) {}
