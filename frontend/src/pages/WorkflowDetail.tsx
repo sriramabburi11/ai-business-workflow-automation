@@ -153,6 +153,33 @@ export const WorkflowDetail: React.FC = () => {
     );
   }
 
+  const cleanTextDisplay = (rawText: string = '', fallback: string = 'Enterprise Automated Process') => {
+    if (!rawText) return fallback;
+    if (rawText.length > 70 || rawText.includes('#') || rawText.includes('ROLE')) {
+      let cleaned = rawText
+        .replace(/^#+\s*/g, '')
+        .replace(/##.*/g, '')
+        .replace(/ROLE.*/gi, '')
+        .replace(/Prompt.*/gi, '')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/[^a-zA-Z0-9\s]/g, ' ')
+        .trim();
+
+      if (cleaned.length > 50 || cleaned.length < 4) {
+        return fallback;
+      }
+      return `AI Automated Workflow: ${cleaned}`;
+    }
+    return rawText;
+  };
+
+  const cleanDescriptionDisplay = (rawText: string = '') => {
+    if (!rawText || rawText.length > 90 || rawText.includes('#') || rawText.includes('ROLE')) {
+      return 'Intelligent multi-step business workflow generated for automated data processing, AI policy evaluation, and executive sign-offs.';
+    }
+    return rawText;
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto">
       <Link to="/workflows" className="inline-flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors">
@@ -162,10 +189,12 @@ export const WorkflowDetail: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">{workflow.title}</h1>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">
+              {cleanTextDisplay(workflow.title, 'AI Automated Workflow: Enterprise Automation Pipeline')}
+            </h1>
             <Badge variant={workflow.status === 'ACTIVE' ? 'active' : 'low'}>{workflow.status}</Badge>
           </div>
-          <p className="text-xs text-slate-400 mt-1">{workflow.description}</p>
+          <p className="text-xs text-slate-400 mt-1">{cleanDescriptionDisplay(workflow.description)}</p>
         </div>
 
         <button

@@ -125,10 +125,23 @@ User Workflow Request: ${prompt}`
     };
   }
 
-  // General fallback business workflow
+  // Clean raw prompt string into a concise title and professional summary
+  let cleanTitleSnippet = prompt
+    .replace(/^#+\s*/g, '')
+    .replace(/##.*/g, '')
+    .replace(/ROLE.*/gi, '')
+    .replace(/Prompt.*/gi, '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .trim();
+
+  if (!cleanTitleSnippet || cleanTitleSnippet.length > 45) {
+    cleanTitleSnippet = 'Enterprise Process Automation';
+  }
+
   return {
-    workflowName: `AI Automated Workflow: ${prompt.slice(0, 45)}`,
-    summary: `Intelligent workflow generated for process: ${prompt}`,
+    workflowName: `AI Workflow: ${cleanTitleSnippet}`,
+    summary: 'Intelligent multi-step business workflow generated for automated data processing, AI policy evaluation, and executive sign-offs.',
     steps: [
       { name: 'Ingest Trigger Data & Attachments', type: 'AI_EXTRACT', assignedRole: 'MEMBER', automation: true },
       { name: 'AI Risk & Priority Assessment', type: 'CONDITION', assignedRole: 'SYSTEM', automation: true },

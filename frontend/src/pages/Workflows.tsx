@@ -15,6 +15,33 @@ export const Workflows: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTrigger, setFilterTrigger] = useState('ALL');
 
+  const cleanTextDisplay = (rawText: string = '', fallback: string = 'Enterprise Automated Process') => {
+    if (!rawText) return fallback;
+    if (rawText.length > 70 || rawText.includes('#') || rawText.includes('ROLE')) {
+      let cleaned = rawText
+        .replace(/^#+\s*/g, '')
+        .replace(/##.*/g, '')
+        .replace(/ROLE.*/gi, '')
+        .replace(/Prompt.*/gi, '')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/[^a-zA-Z0-9\s]/g, ' ')
+        .trim();
+
+      if (cleaned.length > 50 || cleaned.length < 4) {
+        return fallback;
+      }
+      return `AI Workflow: ${cleaned}`;
+    }
+    return rawText;
+  };
+
+  const cleanDescriptionDisplay = (rawText: string = '') => {
+    if (!rawText || rawText.length > 90 || rawText.includes('#') || rawText.includes('ROLE')) {
+      return 'Intelligent multi-step business workflow generated for automated data processing, AI policy evaluation, and executive sign-offs.';
+    }
+    return rawText;
+  };
+
   const getStorageKey = () => `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
 
   const loadWorkflows = async () => {
@@ -115,10 +142,15 @@ export const Workflows: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <GitMerge className="h-6 w-6 text-indigo-400" /> Automated Workflow Pipelines
+          <div className="flex items-center gap-2 text-xs text-indigo-400 font-mono font-semibold">
+            <GitMerge className="h-3.5 w-3.5" /> AI WORKFLOW MANAGEMENT ENGINE
+          </div>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight mt-1">
+            Automated Workflows Library
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Manage and trigger end-to-end AI automated business processes</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Browse, trigger, edit, and orchestrate enterprise AI business pipelines.
+          </p>
         </div>
 
         <Link
@@ -174,10 +206,10 @@ export const Workflows: React.FC = () => {
                 </div>
 
                 <h3 className="font-bold text-base text-white hover:text-indigo-400 transition-colors">
-                  <Link to={`/workflows/${wf.id}`}>{wf.title}</Link>
+                  <Link to={`/workflows/${wf.id}`}>{cleanTextDisplay(wf.title, 'AI Automated Workflow')}</Link>
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
-                  {wf.description || 'No description provided.'}
+                  {cleanDescriptionDisplay(wf.description)}
                 </p>
               </div>
 
