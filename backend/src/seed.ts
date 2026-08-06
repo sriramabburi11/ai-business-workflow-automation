@@ -4,18 +4,22 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting database seed...');
+  console.log('🌱 Starting database seed with comprehensive video demo data...');
 
-  // Clean existing tables
-  await prisma.auditLog.deleteMany();
-  await prisma.approval.deleteMany();
-  await prisma.task.deleteMany();
-  await prisma.workflowExecution.deleteMany();
-  await prisma.document.deleteMany();
-  await prisma.workflowStep.deleteMany();
-  await prisma.workflow.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.organization.deleteMany();
+  // Clean existing tables safely
+  try {
+    await prisma.auditLog.deleteMany();
+    await prisma.approval.deleteMany();
+    await prisma.task.deleteMany();
+    await prisma.workflowExecution.deleteMany();
+    await prisma.document.deleteMany();
+    await prisma.workflowStep.deleteMany();
+    await prisma.workflow.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.organization.deleteMany();
+  } catch (e) {
+    console.warn('Table cleanup warning:', e);
+  }
 
   // 1. Create Default Organization
   const org = await prisma.organization.create({
@@ -25,7 +29,7 @@ async function main() {
     }
   });
 
-  // 2. Create Users (Admin, Manager, Member)
+  // 2. Create Team Users (Admin, Manager, Finance, HR)
   const hashedPassword = await bcrypt.hash('Password123!', 10);
 
   const admin = await prisma.user.create({
@@ -58,12 +62,22 @@ async function main() {
     }
   });
 
+  const hrUser = await prisma.user.create({
+    data: {
+      name: 'Maya Lin',
+      email: 'maya.lin@enterprise.io',
+      password: hashedPassword,
+      role: 'HR',
+      organizationId: org.id
+    }
+  });
+
   await prisma.organization.update({
     where: { id: org.id },
     data: { ownerId: admin.id }
   });
 
-  // 3. Create Sample Workflows
+  // 3. Create Demo Workflows
   const wf1 = await prisma.workflow.create({
     data: {
       organizationId: org.id,
@@ -87,7 +101,7 @@ async function main() {
   const wf2 = await prisma.workflow.create({
     data: {
       organizationId: org.id,
-      title: 'AI Employee Onboarding & Identity Verification',
+      title: 'AI HR Employee Onboarding & Provisioning',
       description: 'Automates identity document checks, IT hardware provisioning tasks, e-signatures, and Slack account generation.',
       trigger: 'MANUAL',
       status: 'ACTIVE',
@@ -121,7 +135,7 @@ async function main() {
     }
   });
 
-  // 4. Create Sample Tasks
+  // 4. Create Demo Tasks
   const task1 = await prisma.task.create({
     data: {
       workflowId: wf1.id,
@@ -158,16 +172,40 @@ async function main() {
     }
   });
 
-  // 5. Create Sample Approvals
+  const task4 = await prisma.task.create({
+    data: {
+      workflowId: wf3.id,
+      title: 'Audit Enterprise Master Services Agreement #MSA-2026-441',
+      description: 'Contract value $45,000.00. Gemini AI flagged 30-day auto-renewal clause liability.',
+      assignee: 'ADMIN',
+      status: 'PENDING',
+      priority: 'HIGH',
+      dueDate: '2026-08-15'
+    }
+  });
+
+  // 5. Create Demo Approvals (with Gemini Risk Scores)
   await prisma.approval.create({
     data: {
       taskId: task1.id,
       workflowId: wf1.id,
       approver: 'Alex Rivera (Manager)',
       decision: 'PENDING',
-      comment: 'Awaiting secondary confirmation of bandwidth add-on fees.',
+      comment: 'Invoice items match purchase order PO-9921; bandwidth add-on verified.',
       aiRiskScore: 18,
       aiRecommendation: 'APPROVE'
+    }
+  });
+
+  await prisma.approval.create({
+    data: {
+      taskId: task4.id,
+      workflowId: wf3.id,
+      approver: 'Sarah Connor (Admin)',
+      decision: 'PENDING',
+      comment: 'High monetary value ($45,000) & auto-renewal terms require secondary sign-off.',
+      aiRiskScore: 78,
+      aiRecommendation: 'MANUAL_REVIEW'
     }
   });
 
@@ -183,7 +221,7 @@ async function main() {
     }
   });
 
-  // 6. Create Sample Documents
+  // 6. Create Demo Documents (with Gemini OCR extractions)
   await prisma.document.create({
     data: {
       workflowId: wf1.id,
@@ -191,16 +229,19 @@ async function main() {
       fileUrl: '/uploads/Acme_Cloud_Invoice_July2026.pdf',
       mimeType: 'application/pdf',
       extractedData: JSON.stringify({
-        documentType: 'Invoice',
+        documentType: 'Invoice / Commercial Receipt',
         extractedFields: {
           vendorName: 'Acme Cloud Solutions Inc.',
           invoiceNumber: 'INV-2026-8942',
           totalAmount: '$4,590.00',
+          subtotalAmount: '$4,250.00',
           taxAmount: '$340.00',
-          dueDate: '2026-08-28'
+          issueDate: '2026-07-28',
+          dueDate: '2026-08-28',
+          paymentTerms: 'Net 30'
         },
-        summary: 'Invoice for hosting & dedicated database clusters.',
-        riskFlags: ['Amount > $2,500 threshold requiring manager signoff'],
+        summary: 'Commercial invoice for enterprise cloud infrastructure services and dedicated hosting for July 2026.',
+        riskFlags: ['Total amount exceeds standard $2,500 auto-approval threshold'],
         confidenceScore: 0.98
       })
     }
@@ -213,21 +254,44 @@ async function main() {
       fileUrl: '/uploads/Employment_Agreement_Signed.pdf',
       mimeType: 'application/pdf',
       extractedData: JSON.stringify({
-        documentType: 'Contract',
+        documentType: 'Employment Contract',
         extractedFields: {
           employeeName: 'Jordan Vance',
           roleTitle: 'Senior Full Stack Engineer',
           startDate: '2026-08-15',
-          annualSalary: '$165,000.00'
+          annualSalary: '$165,000.00',
+          department: 'Engineering'
         },
-        summary: 'Fully executed employment contract with NDA attached.',
+        summary: 'Fully executed employment contract with NDA & IP assignment agreement attached.',
         riskFlags: [],
         confidenceScore: 0.99
       })
     }
   });
 
-  // 7. Create Sample Workflow Executions
+  await prisma.document.create({
+    data: {
+      workflowId: wf3.id,
+      fileName: 'Enterprise_SLA_Vendor_Contract.pdf',
+      fileUrl: '/uploads/Enterprise_SLA_Vendor_Contract.pdf',
+      mimeType: 'application/pdf',
+      extractedData: JSON.stringify({
+        documentType: 'Master Services Agreement',
+        extractedFields: {
+          partyA: 'Global Tech Enterprises LLC',
+          partyB: 'Smart Automation Corp.',
+          effectiveDate: '2026-08-01',
+          contractValue: '$45,000.00',
+          terminationNoticeDays: '30 Days'
+        },
+        summary: 'Master services agreement governing business automation software licensing and SLAs.',
+        riskFlags: ['Auto-renewal clause active unless cancelled 30 days prior'],
+        confidenceScore: 0.94
+      })
+    }
+  });
+
+  // 7. Create Workflow Executions
   await prisma.workflowExecution.create({
     data: {
       workflowId: wf1.id,
@@ -243,12 +307,12 @@ async function main() {
     }
   });
 
-  // 8. Create Sample Audit Logs
+  // 8. Create Audit Logs
   await prisma.auditLog.create({
     data: {
       action: 'SYSTEM_SEED',
       userId: admin.id,
-      details: JSON.stringify({ message: 'Initial system seed executed successfully' })
+      details: JSON.stringify({ message: 'Enterprise demo dataset initialized successfully' })
     }
   });
 
@@ -260,7 +324,23 @@ async function main() {
     }
   });
 
-  console.log('✅ Database seed completed successfully!');
+  await prisma.auditLog.create({
+    data: {
+      action: 'DOCUMENT_UPLOADED',
+      userId: manager.id,
+      details: JSON.stringify({ fileName: 'Acme_Cloud_Invoice_July2026.pdf', documentType: 'Invoice' })
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: 'APPROVAL_SUBMITTED',
+      userId: financeUser.id,
+      details: JSON.stringify({ decision: 'APPROVED', amount: '$840.00' })
+    }
+  });
+
+  console.log('✅ Video demo dataset seeded successfully into PostgreSQL!');
 }
 
 main()
