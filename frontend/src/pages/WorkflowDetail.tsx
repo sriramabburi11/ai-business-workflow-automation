@@ -5,26 +5,41 @@ import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import { GitMerge, Play, ArrowLeft, Clock, CheckCircle2, FileText, ShieldCheck } from 'lucide-react';
 
+import { useAuth } from '../context/AuthContext';
+
 export const WorkflowDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [workflow, setWorkflow] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
 
   const loadWorkflow = async () => {
+    const storageKey = `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
+    const savedCustom: any[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const localMatch = savedCustom.find((w: any) => w.id === id);
+
     try {
       const res = await api.get(`/workflows/${id}`);
-      setWorkflow(res.data);
+      if (res.data) {
+        setWorkflow(res.data);
+        return;
+      }
     } catch (err) {
-      console.error('Failed to fetch workflow detail:', err);
-    } finally {
-      setLoading(false);
+      console.warn('Failed to fetch workflow detail from server, checking local cache:', err);
     }
+
+    if (localMatch) {
+      setWorkflow(localMatch);
+    } else {
+      setWorkflow(null);
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
     if (id) loadWorkflow();
-  }, [id]);
+  }, [id, user]);
 
   const handleRunPipeline = async () => {
     if (!id) return;

@@ -110,17 +110,28 @@ export const WorkflowBuilder: React.FC = () => {
   const handleSaveWorkflow = async () => {
     const targetTitle = title.trim() || 'AI Automated Business Pipeline';
     setIsSaving(true);
-    const storageKey = `custom_workflows_${user?.organizationId || user?.id || 'demo'}`;
+    const orgIdKey = user?.organizationId || user?.id || 'demo';
+    const storageKey = `custom_workflows_${orgIdKey}`;
+    const tempWfId = `wf-${Date.now()}`;
+
     const newWorkflowObj = {
-      id: `wf-${Date.now()}`,
+      id: tempWfId,
       title: targetTitle,
       description,
       trigger,
       status: 'ACTIVE',
-      organizationId: user?.organizationId || 'demo-org-123',
-      createdBy: user?.id || 'demo-user-123',
-      steps
+      organizationId: user?.organizationId || 'org-demo',
+      createdBy: user?.id || 'user-demo',
+      steps: steps.map((s, idx) => ({
+        id: s.id || `step-${idx + 1}`,
+        name: s.name,
+        type: s.type,
+        assignedRole: s.assignedRole || 'MANAGER',
+        order: idx + 1
+      }))
     };
+
+    let targetId = tempWfId;
 
     try {
       const res = await api.post('/workflows', {
@@ -131,6 +142,7 @@ export const WorkflowBuilder: React.FC = () => {
         steps
       });
       const created = res.data || newWorkflowObj;
+      targetId = created.id || tempWfId;
       const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
       localStorage.setItem(storageKey, JSON.stringify([created, ...existing.filter((w: any) => w.id !== created.id)]));
     } catch (err) {
@@ -139,7 +151,7 @@ export const WorkflowBuilder: React.FC = () => {
       localStorage.setItem(storageKey, JSON.stringify([newWorkflowObj, ...existing]));
     } finally {
       setIsSaving(false);
-      navigate('/workflows');
+      navigate(`/workflows/${targetId}`);
     }
   };
 
