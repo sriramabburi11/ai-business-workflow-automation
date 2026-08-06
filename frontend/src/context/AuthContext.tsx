@@ -73,8 +73,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string) => {
-    localStorage.clear();
-    sessionStorage.clear();
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     const derivedName = inferNameFromEmail(email);
     const derivedOrgId = `org-${email.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
     const derivedOrgName = `${derivedName}'s Organization`;
@@ -103,8 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (name: string, email: string, password: string, orgName?: string) => {
-    localStorage.clear();
-    sessionStorage.clear();
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     try {
       const res = await api.post('/auth/register', { name, email, password, organizationName: orgName });
       const { token: newToken, user: userData, organization: orgData } = res.data;
@@ -136,8 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const guestLogin = () => {
-    localStorage.clear();
-    sessionStorage.clear();
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     const demoToken = 'guest-demo-token-jwt-2026';
     localStorage.setItem('token', demoToken);
     setToken(demoToken);
@@ -155,8 +155,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     setToken(null);
     setUser(null);
     setOrganization(null);
