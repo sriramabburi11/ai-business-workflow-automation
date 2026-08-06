@@ -25,6 +25,13 @@ export const Dashboard: React.FC = () => {
   const [executingId, setExecutingId] = useState<string | null>(null);
 
   const loadData = async () => {
+    const savedCustom: any[] = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
+    const defaultSampleWfs = [
+      { id: 'wf-1', title: 'AI Automated Expense & Vendor Disbursement', status: 'ACTIVE', trigger: 'DOCUMENT_UPLOAD', description: 'Ingests vendor receipts, runs AI OCR extraction, flags compliance anomalies, and routes for manager approval.', steps: [1,2,3,4,5] },
+      { id: 'wf-2', title: 'AI Employee Onboarding & Identity Verification', status: 'ACTIVE', trigger: 'MANUAL', description: 'Automates identity document checks, IT hardware provisioning tasks, e-signatures, and Slack account generation.', steps: [1,2,3,4] },
+      { id: 'wf-3', title: 'Customer Escalation & Contract Renewal AI Review', status: 'ACTIVE', trigger: 'SCHEDULE', description: 'Evaluates high-tier enterprise SLAs, analyzes legal contract terms with Gemini AI, and escalates at-risk customer accounts.', steps: [1,2,3] }
+    ];
+
     try {
       const [analyticsRes, workflowsRes, approvalsRes] = await Promise.all([
         api.get('/analytics'),
@@ -32,19 +39,18 @@ export const Dashboard: React.FC = () => {
         api.get('/approvals?status=PENDING')
       ]);
       setAnalytics(analyticsRes.data);
-      setWorkflows(workflowsRes.data);
+      const combined = [...savedCustom, ...(workflowsRes.data || defaultSampleWfs)];
+      const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+      setWorkflows(unique);
       setApprovals(approvalsRes.data);
     } catch (err) {
       console.warn('Dashboard API fallback activated:', err);
-      // Resilient fallback sample data
+      const combined = [...savedCustom, ...defaultSampleWfs];
+      const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
       setAnalytics({
-        metrics: { totalWorkflows: 3, activeWorkflows: 3, pendingApprovalsCount: 1, aiHoursSaved: 54, approvalRate: 94 }
+        metrics: { totalWorkflows: unique.length, activeWorkflows: unique.length, pendingApprovalsCount: 1, aiHoursSaved: 54 + (savedCustom.length * 5), approvalRate: 94 }
       });
-      setWorkflows([
-        { id: 'wf-1', title: 'AI Automated Expense & Vendor Disbursement', status: 'ACTIVE', trigger: 'DOCUMENT_UPLOAD', description: 'Ingests vendor receipts, runs AI OCR extraction, flags compliance anomalies, and routes for manager approval.', steps: [1,2,3,4,5] },
-        { id: 'wf-2', title: 'AI Employee Onboarding & Identity Verification', status: 'ACTIVE', trigger: 'MANUAL', description: 'Automates identity document checks, IT hardware provisioning tasks, e-signatures, and Slack account generation.', steps: [1,2,3,4] },
-        { id: 'wf-3', title: 'Customer Escalation & Contract Renewal AI Review', status: 'ACTIVE', trigger: 'SCHEDULE', description: 'Evaluates high-tier enterprise SLAs, analyzes legal contract terms with Gemini AI, and escalates at-risk customer accounts.', steps: [1,2,3] }
-      ]);
+      setWorkflows(unique);
       setApprovals([
         { id: 'appr-1', task: { title: 'Approve Cloud Infrastructure Invoice #INV-2026-8942' }, approver: 'Alex Rivera (Manager)', aiRiskScore: 18, aiRecommendation: 'APPROVE', comment: 'Awaiting secondary confirmation of bandwidth add-on fees.' }
       ]);

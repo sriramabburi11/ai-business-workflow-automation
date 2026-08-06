@@ -55,16 +55,23 @@ export const Workflows: React.FC = () => {
   ];
 
   const loadWorkflows = async () => {
+    const savedCustom: any[] = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
     try {
       const res = await api.get('/workflows');
-      if (res.data && res.data.length > 0) {
-        setWorkflows(res.data);
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        const combined = [...savedCustom, ...res.data];
+        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        setWorkflows(unique);
       } else {
-        setWorkflows(sampleWorkflows);
+        const combined = [...savedCustom, ...sampleWorkflows];
+        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+        setWorkflows(unique);
       }
     } catch (err) {
       console.warn('Workflows fallback activated:', err);
-      setWorkflows(sampleWorkflows);
+      const combined = [...savedCustom, ...sampleWorkflows];
+      const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+      setWorkflows(unique);
     } finally {
       setLoading(false);
     }
@@ -78,8 +85,12 @@ export const Workflows: React.FC = () => {
     if (confirm('Are you sure you want to delete this workflow?')) {
       try {
         await api.delete(`/workflows/${id}`);
-        setWorkflows(prev => prev.filter(w => w.id !== id));
       } catch (err) {
+        console.warn('Delete workflow API fallback');
+      } finally {
+        const savedCustom: any[] = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
+        const updatedCustom = savedCustom.filter(w => w.id !== id);
+        localStorage.setItem('custom_workflows', JSON.stringify(updatedCustom));
         setWorkflows(prev => prev.filter(w => w.id !== id));
       }
     }

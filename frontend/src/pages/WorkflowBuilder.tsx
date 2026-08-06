@@ -120,20 +120,33 @@ export const WorkflowBuilder: React.FC = () => {
     }
 
     setIsSaving(true);
+    const newWorkflowObj = {
+      id: `wf-${Date.now()}`,
+      title,
+      description,
+      trigger,
+      status: 'ACTIVE',
+      steps
+    };
+
     try {
-      await api.post('/workflows', {
+      const res = await api.post('/workflows', {
         title,
         description,
         trigger,
         status: 'ACTIVE',
         steps
       });
-      navigate('/workflows');
+      const created = res.data || newWorkflowObj;
+      const existing = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
+      localStorage.setItem('custom_workflows', JSON.stringify([created, ...existing.filter((w: any) => w.id !== created.id)]));
     } catch (err) {
-      console.warn('Save workflow fallback');
-      navigate('/workflows');
+      console.warn('Save workflow client fallback activated:', err);
+      const existing = JSON.parse(localStorage.getItem('custom_workflows') || '[]');
+      localStorage.setItem('custom_workflows', JSON.stringify([newWorkflowObj, ...existing]));
     } finally {
       setIsSaving(false);
+      navigate('/workflows');
     }
   };
 
