@@ -90,12 +90,12 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-indigo-400 font-mono font-semibold">
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs text-indigo-400 font-mono font-semibold tracking-wider">
             <Zap className="h-3.5 w-3.5" /> REAL-TIME WORKFLOW COMMAND CENTER
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-1">
             Enterprise Automation Overview
           </h1>
           <p className="text-xs text-slate-400 mt-1">
@@ -103,16 +103,16 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <Link
             to="/workflows/new"
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 flex items-center gap-2 transition-all hover:scale-105"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-90 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all"
           >
             <Sparkles className="h-4 w-4" /> Generate AI Workflow
           </Link>
           <Link
             to="/documents"
-            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 font-semibold text-xs transition-all flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 font-semibold text-xs flex items-center justify-center gap-2 transition-all"
           >
             <FileText className="h-4 w-4 text-purple-400" /> Upload Document
           </Link>

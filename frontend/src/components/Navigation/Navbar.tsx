@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Search, Bell, Building, LogOut, ChevronDown, Sparkles, User as UserIcon, Menu } from 'lucide-react';
+import { Search, Bell, Building, LogOut, ChevronDown, Sparkles, User as UserIcon, Menu, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface NavbarProps {
@@ -13,32 +13,39 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   return (
-    <header className="h-16 border-b border-slate-800 bg-[#090d16]/90 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between gap-3">
-      {/* Mobile Hamburger & Brand Icon */}
+    <header className="h-16 border-b border-slate-800 bg-[#090d16]/95 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between gap-3">
+      {/* Left: Mobile Menu Trigger & Brand logo on mobile */}
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors"
+          className="lg:hidden p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors"
           aria-label="Toggle Menu"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-5 w-5 text-indigo-400" />
         </button>
 
-        {/* Search Input */}
-        <div className="relative w-48 sm:w-80 lg:w-96">
+        <Link to="/dashboard" className="lg:hidden flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
+            <Zap className="h-4 w-4 text-white" />
+          </div>
+          <span className="font-extrabold text-sm text-white tracking-tight">Nexus<span className="text-indigo-400">AI</span></span>
+        </Link>
+
+        {/* Search Input for tablet & desktop */}
+        <div className="relative hidden sm:block w-48 sm:w-64 md:w-80 lg:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search workflows, tasks..."
-            className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-8 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all"
+            className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all"
           />
         </div>
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* Active Organization Badge */}
-        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Active Organization Badge for Desktop */}
+        <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 font-medium">
           <Building className="h-3.5 w-3.5 text-indigo-400" />
           <span className="truncate max-w-[150px]">{organization?.name || 'Smart Automation Enterprise'}</span>
         </div>
@@ -47,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all relative"
+            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all relative"
             title="Notifications"
           >
             <Bell className="h-4 w-4" />
@@ -80,16 +87,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
         <div className="relative">
           <button
             onClick={() => setShowUserDropdown(!showUserDropdown)}
-            className="flex items-center gap-2 p-1.5 sm:pr-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-all"
+            className="flex items-center gap-2 p-1 sm:pr-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-all"
           >
-            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-xs shadow-md">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-xs shadow-md">
               {user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
             </div>
-            <div className="text-left hidden sm:block">
+            <div className="text-left hidden md:block">
               <div className="text-xs font-semibold text-slate-200">{user?.name || 'Sarah Connor'}</div>
               <div className="text-[10px] text-indigo-400 font-mono font-medium">{user?.role || 'ADMIN'}</div>
             </div>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400 hidden sm:block" />
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400 hidden md:block" />
           </button>
 
           {showUserDropdown && (
