@@ -41,10 +41,19 @@ export const Approvals: React.FC = () => {
   };
 
   const loadApprovals = async () => {
+    const cleanEmail = (user?.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isCleared = localStorage.getItem(`cleared_approvals_${cleanEmail}`) === 'true';
     const savedCustom: any[] = getTenantStorageData('custom_approvals', user);
+
+    if (isCleared && savedCustom.length === 0) {
+      setApprovals([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await api.get('/approvals');
-      if (res.data && Array.isArray(res.data)) {
+      if (res.data && Array.isArray(res.data) && !isCleared) {
         const combined = [...savedCustom, ...res.data];
         const unique = deduplicateApprovals(combined);
         setApprovals(unique);
@@ -67,15 +76,19 @@ export const Approvals: React.FC = () => {
     if (user?.organizationId) {
       localStorage.setItem(`custom_approvals_${user.organizationId}`, JSON.stringify(updated));
     }
+    if (updated.length === 0) {
+      localStorage.setItem(`cleared_approvals_${cleanEmail}`, 'true');
+    }
   };
 
   const handleClearAllApprovals = () => {
-    if (confirm('Clear all items from Approvals Hub?')) {
+    if (confirm('Permanently clear all approval items from your workspace queue?')) {
       setApprovals([]);
       const cleanEmail = (user?.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
-      localStorage.removeItem(`custom_approvals_${cleanEmail}`);
+      localStorage.setItem(`custom_approvals_${cleanEmail}`, JSON.stringify([]));
+      localStorage.setItem(`cleared_approvals_${cleanEmail}`, 'true');
       if (user?.organizationId) {
-        localStorage.removeItem(`custom_approvals_${user.organizationId}`);
+        localStorage.setItem(`custom_approvals_${user.organizationId}`, JSON.stringify([]));
       }
     }
   };
@@ -85,6 +98,8 @@ export const Approvals: React.FC = () => {
   }, [user]);
 
   const saveToLocalCache = (item: any) => {
+    const cleanEmail = (user?.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
+    localStorage.removeItem(`cleared_approvals_${cleanEmail}`);
     saveTenantStorageData('custom_approvals', user, item);
     const updated = getTenantStorageData('custom_approvals', user);
     setApprovals(updated);

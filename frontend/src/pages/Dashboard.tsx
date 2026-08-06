@@ -29,8 +29,10 @@ export const Dashboard: React.FC = () => {
   const [executingId, setExecutingId] = useState<string | null>(null);
 
   const loadData = async () => {
+    const cleanEmail = (user?.email || 'demo').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isCleared = localStorage.getItem(`cleared_approvals_${cleanEmail}`) === 'true';
     const savedWorkflows: any[] = getTenantStorageData('custom_workflows', user);
-    const savedApprovals: any[] = getTenantStorageData('custom_approvals', user);
+    const savedApprovals: any[] = isCleared ? [] : getTenantStorageData('custom_approvals', user);
 
     try {
       const [analyticsRes, workflowsRes, approvalsRes] = await Promise.all([
@@ -43,7 +45,7 @@ export const Dashboard: React.FC = () => {
       const uniqueWf = Array.from(new Map(combinedWf.map(item => [item.id, item])).values());
       setWorkflows(uniqueWf);
 
-      const combinedAppr = [...savedApprovals, ...(approvalsRes.data || [])];
+      const combinedAppr = isCleared ? savedApprovals : [...savedApprovals, ...(approvalsRes.data || [])];
       const uniqueAppr = Array.from(new Map(combinedAppr.map(item => [item.id, item])).values());
       setApprovals(uniqueAppr);
     } catch (err) {
