@@ -56,8 +56,9 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
       });
     } catch (e) {
       console.warn('Database write fallback:', e);
-      const fallbackOrgId = `org-user-${Date.now()}`;
-      user = { id: 'user-' + Date.now(), name, email, role: role || 'ADMIN', organizationId: fallbackOrgId };
+      const cleanEmail = email.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const fallbackOrgId = `org-${cleanEmail}`;
+      user = { id: `user-${cleanEmail}`, name, email, role: role || 'ADMIN', organizationId: fallbackOrgId };
       org = { id: fallbackOrgId, name: organizationName || `${name}'s Organization` };
     }
 
@@ -101,6 +102,12 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    const cleanEmail = email.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const derivedOrgId = `org-${cleanEmail}`;
+    const derivedUserId = `user-${cleanEmail}`;
+    const derivedName = inferNameFromEmail(email);
+    const derivedOrgName = `${derivedName}'s Organization`;
+
     let user: any = null;
     try {
       user = await prisma.user.findUnique({ where: { email } });
@@ -109,11 +116,8 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     }
 
     if (!user) {
-      const derivedName = inferNameFromEmail(email);
-      const derivedOrgId = `org-${email.replace(/[^a-zA-Z0-9]/g, '')}`;
-      const derivedOrgName = `${derivedName}'s Organization`;
       const fallbackUser = {
-        id: `user-${Date.now()}`,
+        id: derivedUserId,
         name: derivedName,
         email,
         role: 'ADMIN',
@@ -140,7 +144,7 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role, organizationId: user.organizationId },
+      { id: user.id || derivedUserId, email: user.email, name: user.name, role: user.role, organizationId: user.organizationId || derivedOrgId },
       env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -148,20 +152,24 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     return res.json({
       token,
       user: {
-        id: user.id,
+        id: user.id || derivedUserId,
         name: user.name,
         email: user.email,
         role: user.role,
-        organizationId: user.organizationId
-      }
+        organizationId: user.organizationId || derivedOrgId
+      },
+      organization: { id: user.organizationId || derivedOrgId, name: derivedOrgName }
     });
   } catch (error) {
     console.error('Login error:', error);
     const email = req.body.email || 'user@enterprise.io';
+    const cleanEmail = email.toLowerCase().replace(/[^a-z0-9]/g, '');
     const derivedName = inferNameFromEmail(email);
-    const derivedOrgId = `org-${email.replace(/[^a-zA-Z0-9]/g, '')}`;
+    const derivedOrgId = `org-${cleanEmail}`;
+    const derivedUserId = `user-${cleanEmail}`;
+
     const fallbackUser = {
-      id: `user-${Date.now()}`,
+      id: derivedUserId,
       name: derivedName,
       email,
       role: 'ADMIN',
@@ -195,11 +203,15 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
     }
 
     if (!user) {
-      const derivedName = req.user.name || inferNameFromEmail(req.user.email);
+      const email = req.user.email || 'user@enterprise.io';
+      const cleanEmail = email.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const derivedName = req.user.name || inferNameFromEmail(email);
+      const derivedOrgId = req.user.organizationId || `org-${cleanEmail}`;
+      const derivedUserId = req.user.id || `user-${cleanEmail}`;
       const orgName = `${derivedName}'s Organization`;
       return res.json({
-        user: { ...req.user, name: derivedName },
-        organization: { id: req.user.organizationId || `org-${Date.now()}`, name: orgName }
+        user: { ...req.user, id: derivedUserId, organizationId: derivedOrgId, name: derivedName },
+        organization: { id: derivedOrgId, name: orgName }
       });
     }
 
@@ -208,10 +220,12 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
   } catch (error) {
     console.error('Get profile error:', error);
     const email = req.user?.email || 'user@enterprise.io';
+    const cleanEmail = email.toLowerCase().replace(/[^a-z0-9]/g, '');
     const derivedName = req.user?.name || inferNameFromEmail(email);
-    const derivedOrgId = req.user?.organizationId || `org-${email.replace(/[^a-zA-Z0-9]/g, '')}`;
+    const derivedOrgId = req.user?.organizationId || `org-${cleanEmail}`;
+    const derivedUserId = req.user?.id || `user-${cleanEmail}`;
     const fallbackUser = {
-      id: req.user?.id || `user-${Date.now()}`,
+      id: derivedUserId,
       name: derivedName,
       email,
       role: req.user?.role || 'ADMIN',
