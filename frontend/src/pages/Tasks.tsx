@@ -7,7 +7,7 @@ import { CheckSquare, Filter, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Plus } from 'lucide-react';
 
-import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+import { getTenantStorageData, saveTenantStorageData, syncCloudItemsToLocalStorage } from '../utils/storage';
 
 export const Tasks: React.FC = () => {
   const { user } = useAuth();
@@ -21,9 +21,9 @@ export const Tasks: React.FC = () => {
     try {
       const res = await api.get('/tasks');
       if (res.data && Array.isArray(res.data)) {
-        const combined = [...savedCustom, ...res.data];
-        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-        setTasks(unique);
+        syncCloudItemsToLocalStorage('custom_tasks', user, res.data);
+        const updatedLocal = getTenantStorageData('custom_tasks', user);
+        setTasks(updatedLocal);
       } else {
         setTasks(savedCustom);
       }

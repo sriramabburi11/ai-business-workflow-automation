@@ -6,7 +6,7 @@ import { Card } from '../components/UI/Card';
 import { Badge } from '../components/UI/Badge';
 import { GitMerge, Sparkles, Play, Trash2, Edit3, Search, Filter, CheckCircle2 } from 'lucide-react';
 
-import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+import { getTenantStorageData, saveTenantStorageData, syncCloudItemsToLocalStorage } from '../utils/storage';
 
 export const Workflows: React.FC = () => {
   const { user } = useAuth();
@@ -54,9 +54,9 @@ export const Workflows: React.FC = () => {
     try {
       const res = await api.get('/workflows');
       if (res.data && Array.isArray(res.data)) {
-        const combined = [...savedCustom, ...res.data];
-        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-        setWorkflows(unique);
+        syncCloudItemsToLocalStorage('custom_workflows', user, res.data);
+        const updatedLocal = getTenantStorageData('custom_workflows', user);
+        setWorkflows(updatedLocal);
       } else {
         setWorkflows(savedCustom);
       }

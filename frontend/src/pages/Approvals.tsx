@@ -8,7 +8,7 @@ import { ShieldCheck, Sparkles, CheckCircle2, XCircle, AlertTriangle, FileText, 
 import { useAuth } from '../context/AuthContext';
 import { Plus } from 'lucide-react';
 
-import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+import { getTenantStorageData, saveTenantStorageData, syncCloudItemsToLocalStorage } from '../utils/storage';
 
 export const Approvals: React.FC = () => {
   const { user } = useAuth();
@@ -54,8 +54,9 @@ export const Approvals: React.FC = () => {
     try {
       const res = await api.get('/approvals');
       if (res.data && Array.isArray(res.data) && !isCleared) {
-        const combined = [...savedCustom, ...res.data];
-        const unique = deduplicateApprovals(combined);
+        syncCloudItemsToLocalStorage('custom_approvals', user, res.data);
+        const updatedLocal = getTenantStorageData('custom_approvals', user);
+        const unique = deduplicateApprovals(updatedLocal);
         setApprovals(unique);
       } else {
         setApprovals(deduplicateApprovals(savedCustom));

@@ -52,3 +52,30 @@ export const saveTenantStorageData = (prefix: string, user: any, item: any) => {
     }
   } catch (e) {}
 };
+
+export const syncCloudItemsToLocalStorage = (prefix: string, user: any, cloudItems: any[]) => {
+  if (!user || !user.email || !Array.isArray(cloudItems)) return;
+  const cleanEmail = user.email.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const primaryKey = `${prefix}_${cleanEmail}`;
+
+  const existing = getTenantStorageData(prefix, user);
+  const combined = [...cloudItems, ...existing];
+  const uniqueMap = new Map<string, any>();
+  combined.forEach(item => {
+    if (item && item.id) {
+      uniqueMap.set(item.id, {
+        ...item,
+        createdBy: item.createdBy || user.id,
+        organizationId: item.organizationId || user.organizationId
+      });
+    }
+  });
+
+  const merged = Array.from(uniqueMap.values());
+  try {
+    localStorage.setItem(primaryKey, JSON.stringify(merged));
+    if (user.organizationId && user.organizationId !== 'demo-org-123') {
+      localStorage.setItem(`${prefix}_${user.organizationId}`, JSON.stringify(merged));
+    }
+  } catch (e) {}
+};

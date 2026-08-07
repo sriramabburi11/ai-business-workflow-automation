@@ -6,7 +6,7 @@ import { FileText, Upload, Sparkles, AlertTriangle, CheckCircle2, Eye, Code } fr
 
 import { useAuth } from '../context/AuthContext';
 
-import { getTenantStorageData, saveTenantStorageData } from '../utils/storage';
+import { getTenantStorageData, saveTenantStorageData, syncCloudItemsToLocalStorage } from '../utils/storage';
 
 export const Documents: React.FC = () => {
   const { user } = useAuth();
@@ -21,10 +21,10 @@ export const Documents: React.FC = () => {
     try {
       const res = await api.get('/documents');
       if (res.data && Array.isArray(res.data)) {
-        const combined = [...savedCustom, ...res.data];
-        const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-        setDocuments(unique);
-        if (unique.length > 0) setSelectedDoc((prev: any) => prev || unique[0]);
+        syncCloudItemsToLocalStorage('custom_documents', user, res.data);
+        const updatedLocal = getTenantStorageData('custom_documents', user);
+        setDocuments(updatedLocal);
+        if (updatedLocal.length > 0) setSelectedDoc((prev: any) => prev || updatedLocal[0]);
       } else {
         setDocuments(savedCustom);
         if (savedCustom.length > 0) setSelectedDoc((prev: any) => prev || savedCustom[0]);
