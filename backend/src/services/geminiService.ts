@@ -125,22 +125,31 @@ User Workflow Request: ${prompt}`
     };
   }
 
-  // Clean raw prompt string into a concise title and professional summary
+  // Clean raw prompt string into a concise, unique title
   let cleanTitleSnippet = prompt
     .replace(/^#+\s*/g, '')
     .replace(/##.*/g, '')
     .replace(/ROLE.*/gi, '')
     .replace(/Prompt.*/gi, '')
+    .replace(/Create\s+an?\s+/gi, '')
+    .replace(/Automate\s+/gi, '')
     .replace(/[\r\n]+/g, ' ')
     .replace(/[^a-zA-Z0-9\s]/g, ' ')
     .trim();
 
-  if (!cleanTitleSnippet || cleanTitleSnippet.length > 45) {
-    cleanTitleSnippet = 'Enterprise Process Automation';
+  if (cleanTitleSnippet.length > 45) {
+    cleanTitleSnippet = cleanTitleSnippet.slice(0, 45).replace(/\s+\S*$/, '').trim();
   }
 
+  if (!cleanTitleSnippet || cleanTitleSnippet.length < 3) {
+    cleanTitleSnippet = `Custom Workflow ${Date.now().toString().slice(-4)}`;
+  }
+
+  // Capitalize first letter of each word
+  const formattedTitle = cleanTitleSnippet.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+
   return {
-    workflowName: `AI Workflow: ${cleanTitleSnippet}`,
+    workflowName: `AI Workflow: ${formattedTitle}`,
     summary: 'Intelligent multi-step business workflow generated for automated data processing, AI policy evaluation, and executive sign-offs.',
     steps: [
       { name: 'Ingest Trigger Data & Attachments', type: 'AI_EXTRACT', assignedRole: 'MEMBER', automation: true },

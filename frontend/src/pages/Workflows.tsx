@@ -19,22 +19,27 @@ export const Workflows: React.FC = () => {
 
   const cleanTextDisplay = (rawText: string = '', fallback: string = 'Enterprise Automated Process') => {
     if (!rawText) return fallback;
-    if (rawText.length > 70 || rawText.includes('#') || rawText.includes('ROLE')) {
-      let cleaned = rawText
-        .replace(/^#+\s*/g, '')
-        .replace(/##.*/g, '')
-        .replace(/ROLE.*/gi, '')
-        .replace(/Prompt.*/gi, '')
-        .replace(/[\r\n]+/g, ' ')
-        .replace(/[^a-zA-Z0-9\s]/g, ' ')
-        .trim();
+    let cleaned = rawText
+      .replace(/^#+\s*/g, '')
+      .replace(/##.*/g, '')
+      .replace(/ROLE.*/gi, '')
+      .replace(/Prompt.*/gi, '')
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/[^a-zA-Z0-9\s$\-\._]/g, ' ')
+      .trim();
 
-      if (cleaned.length > 50 || cleaned.length < 4) {
-        return fallback;
-      }
+    if (cleaned.length > 55) {
+      cleaned = cleaned.slice(0, 55).replace(/\s+\S*$/, '').trim() + '...';
+    }
+
+    if (!cleaned || cleaned.length < 3) {
+      return fallback;
+    }
+
+    if (!cleaned.toLowerCase().includes('workflow') && !cleaned.toLowerCase().includes('pipeline') && !cleaned.toLowerCase().includes('process')) {
       return `AI Workflow: ${cleaned}`;
     }
-    return rawText;
+    return cleaned;
   };
 
   const cleanDescriptionDisplay = (rawText: string = '') => {
